@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+
+# Local configuration (contains credentials - NEVER commit)
+public/config.local.js
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test artifacts
+test-results/
+playwright-report/
+
+# Docker
+docker-compose.override.yml
+# Secrets and environment files
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local configuration and unreviewed examples
+public/config.local.js
+public/config.local.js.example
+
+# JWT/token helper scripts - exclude until reviewed
+/gen_anon_jwt.py
+/gen_jwt.py
+/gen_jwt_new.ts
+/gen_token.py
+/verify_jwt.py
+/verify_jwt2.py
+
+# Local Docker and gateway configuration - review before sharing
+/docker-compose.supabase.yml
+/kong.yml
+
+# Root-level temporary debugging scripts
+/test_*.ts
+/test_*.sh
+
+# Supabase local temporary state
+supabase/.temp/
+supabase/config.toml

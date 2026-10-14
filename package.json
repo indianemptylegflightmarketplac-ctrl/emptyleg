@@ -1,0 +1,24 @@
+{
+  "name": "indian-empty-leg-flight-marketplace",
+  "version": "0.1.0",
+  "description": "Indian Empty-Leg Private Flight Marketplace - Enquiry-only MVP",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "install:browsers": "playwright install chromium",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:db:reset": "supabase db reset",
+    "supabase:db:push": "supabase db push",
+    "supabase:functions:serve": "supabase functions serve"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "@types/node": "^20.0.0",
+    "supabase": "^1.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}

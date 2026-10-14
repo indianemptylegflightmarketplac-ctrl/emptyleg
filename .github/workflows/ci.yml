@@ -1,0 +1,339 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  SUPABASE_URL: http://localhost:3000
+  ANON_KEY: ${{ secrets.ANON_KEY }}
+  ANON_JWT: ${{ secrets.ANON_JWT }}
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & TypeCheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeCheck
+        run: npx tsc --noEmit
+
+  migration-check:
+    name: Migration Check
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: public.ecr.aws/supabase/postgres:15.6.1.139
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Supabase CLI
+        run: npm install -g supabase
+
+      - name: Run migration check (dry run)
+        run: |
+          supabase db push --dry-run --db-url "postgresql://postgres:postgres@localhost:5432/postgres"
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@localhost:5432/postgres
+
+  api-tests:
+    name: API Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: public.ecr.aws/supabase/postgres:15.6.1.139
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      supabase:
+        image: supabase/supabase:latest
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 3000:3000
+          - 54321:54321
+          - 9999:9999
+          - 4000:4000
+        options: >-
+          --health-cmd "curl -f http://localhost:3000/ || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate test JWT
+        id: jwt
+        run: |
+          node -e "
+            const crypto = require('crypto');
+            const header = Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url');
+            const payload = Buffer.from(JSON.stringify({role:'anon',exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000)})).toString('base64url');
+            const secret = process.env.JWT_SECRET;
+            if (!secret) { console.error('JWT_SECRET not set'); process.exit(1); }
+            const signature = crypto.createHmac('sha256', secret).update(header+'.'+payload).digest('base64url');
+            console.log('ANON_JWT=' + header + '.' + payload + '.' + signature);
+          " >> $GITHUB_OUTPUT
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Wait for Supabase
+        run: |
+          for i in {1..30}; do
+            if curl -s -f http://localhost:3000/ > /dev/null; then
+              echo "Supabase ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Supabase failed to start"
+          exit 1
+
+      - name: Run API Tests
+        run: npx playwright test tests/api.spec.ts --reporter=line
+        env:
+          ANON_JWT: ${{ steps.jwt.outputs.ANON_JWT }}
+
+  frontend-tests:
+    name: Frontend E2E Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: public.ecr.aws/supabase/postgres:15.6.1.139
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      supabase:
+        image: supabase/supabase:latest
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 3000:3000
+          - 54321:54321
+          - 9999:9999
+          - 4000:4000
+        options: >-
+          --health-cmd "curl -f http://localhost:3000/ || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate test JWT
+        id: jwt
+        run: |
+          node -e "
+            const crypto = require('crypto');
+            const header = Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url');
+            const payload = Buffer.from(JSON.stringify({role:'anon',exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000)})).toString('base64url');
+            const secret = process.env.JWT_SECRET;
+            if (!secret) { console.error('JWT_SECRET not set'); process.exit(1); }
+            const signature = crypto.createHmac('sha256', secret).update(header+'.'+payload).digest('base64url');
+            console.log('ANON_JWT=' + header + '.' + payload + '.' + signature);
+          " >> $GITHUB_OUTPUT
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Build frontend config
+        run: |
+          echo "window.__ENV__ = { SUPABASE_URL: 'http://localhost:3000', SUPABASE_ANON_KEY: '${{ secrets.ANON_KEY }}' };" > public/env.js
+
+      - name: Start frontend server
+        run: |
+          cd public
+          npx serve -l 5173 &
+          sleep 3
+
+      - name: Generate test JWT
+        id: jwt
+        run: |
+          node -e "
+            const crypto = require('crypto');
+            const header = Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url');
+            const payload = Buffer.from(JSON.stringify({role:'anon',exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000)})).toString('base64url');
+            const secret = process.env.JWT_SECRET;
+            if (!secret) { console.error('JWT_SECRET not set'); process.exit(1); }
+            const signature = crypto.createHmac('sha256', secret).update(header+'.'+payload).digest('base64url');
+            console.log('ANON_JWT=' + header + '.' + payload + '.' + signature);
+          " >> $GITHUB_OUTPUT
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Run Frontend E2E Tests
+        run: npx playwright test tests/frontend.spec.ts --reporter=line
+        env:
+          ANON_JWT: ${{ steps.jwt.outputs.ANON_JWT }}
+
+  security-tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: public.ecr.aws/supabase/postgres:15.6.1.139
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      supabase:
+        image: supabase/supabase:latest
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 3000:3000
+          - 54321:54321
+          - 9999:9999
+          - 4000:4000
+        options: >-
+          --health-cmd "curl -f http://localhost:3000/ || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate test JWT
+        id: jwt
+        run: |
+          node -e "
+            const crypto = require('crypto');
+            const header = Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url');
+            const payload = Buffer.from(JSON.stringify({role:'anon',exp:Math.floor(Date.now()/1000)+3600,iat:Math.floor(Date.now()/1000)})).toString('base64url');
+            const secret = process.env.JWT_SECRET;
+            if (!secret) { console.error('JWT_SECRET not set'); process.exit(1); }
+            const signature = crypto.createHmac('sha256', secret).update(header+'.'+payload).digest('base64url');
+            console.log('ANON_JWT=' + header + '.' + payload + '.' + signature);
+          " >> $GITHUB_OUTPUT
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Wait for Supabase
+        run: |
+          for i in {1..30}; do
+            if curl -s -f http://localhost:3000/ > /dev/null; then
+              echo "Supabase ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Supabase failed to start"
+          exit 1
+
+      - name: Run Security Tests
+        run: npx playwright test tests/security.spec.ts --reporter=line
+        env:
+          ANON_JWT: ${{ steps.jwt.outputs.ANON_JWT }}
+
+  deploy-check:
+    name: Deploy Check
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, migration-check, api-tests, frontend-tests, security-tests]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for production config
+        run: |
+          if [ -z "$SUPABASE_PROJECT_REF" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Missing production secrets. Set SUPABASE_PROJECT_REF and SUPABASE_ANON_KEY in repository secrets."
+            exit 1
+          fi
+          echo "Production config present"
+
+      - name: Deploy to Supabase (placeholder)
+        run: |
+          echo "Deploy to Supabase Cloud would happen here"
+          echo "Run: supabase db push --project-ref \$SUPABASE_PROJECT_REF"
+
+      - name: Deploy frontend (placeholder)
+        run: |
+          echo "Deploy frontend to Vercel/Netlify/Cloudflare would happen here"
