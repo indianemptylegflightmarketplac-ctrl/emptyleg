@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | EmptyLeg India</title>
+  <meta name="description" content="EmptyLeg India admin dashboard - manage operator submissions and view marketplace analytics.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #64748b;
+      --brand: #1e3a8a;
+      --brand-600: #1e40af;
+      --gold: #d97706;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --success: #15803d;
+      --danger: #dc2626;
+      --warning: #d97706;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'DM Sans', sans-serif; color: var(--ink); background: var(--slate-50); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    h1, h2, h3 { font-family: 'Cormorant Garamond', serif; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; font-weight: 600; transition: all 0.2s ease; cursor: pointer; border: none; font-size: 0.9rem; padding: 10px 18px; }
+    .btn-primary { background: var(--brand); color: #fff; }
+    .btn-primary:hover { background: var(--brand-600); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-success:hover { background: #14532d; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-outline { background: #fff; color: var(--brand); border: 2px solid var(--brand); }
+    .btn-outline:hover { background: #f8fafc; }
+    .btn-ghost { background: #f1f5f9; color: var(--ink); }
+    .btn-ghost:hover { background: #e2e8f0; }
+    .input { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; background: #fff; transition: border-color 0.2s; }
+    .input:focus { outline: none; border-color: var(--brand); }
+    .card { background: #fff; border-radius: 12px; border: 1px solid var(--slate-100); padding: 20px; box-shadow: 0 2px 8px -2px rgba(2,6,23,0.05); }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .badge-pending { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .badge-approved { background: #ecfdf5; color: #065f46; border: 1px solid #bbf7d0; }
+    .badge-rejected { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .badge-live { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+    .stat-card { background: #fff; border-radius: 12px; border: 1px solid var(--slate-100); padding: 24px; box-shadow: 0 2px 8px -2px rgba(2,6,23,0.05); }
+    .stat-value { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 700; color: var(--ink); }
+    .stat-label { font-size: 0.85rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 12px; border-bottom: 1px solid var(--slate-100); }
+    td { padding: 12px; border-bottom: 1px solid var(--slate-100); font-size: 0.9rem; }
+    tr:hover { background: #f8fafc; }
+    .login-card { max-width: 400px; margin: 60px auto; padding: 32px; background: #fff; border-radius: 16px; border: 1px solid var(--slate-100); box-shadow: 0 8px 24px -4px rgba(2,6,23,0.1); }
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .toast { position: fixed; bottom: 28px; right: 28px; padding: 14px 22px; border-radius: 12px; color: #fff; font-weight: 600; z-index: 2000; animation: slideIn 0.35s ease; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); }
+    .toast-success { background: var(--success); }
+    .toast-error { background: var(--danger); }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
+    .copy-btn { background: #f1f5f9; color: var(--ink); border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 12px; font-size: 0.85rem; cursor: pointer; }
+    .copy-btn:hover { background: #e2e8f0; }
+    .copy-btn.copied { background: var(--success); color: #fff; border-color: var(--success); }
+    .whatsapp-link { color: var(--brand); text-decoration: underline; font-size: 0.85rem; word-break: break-all; }
+    .whatsapp-link:hover { color: var(--brand-600); }
+    .search-input { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.95rem; background: #fff; }
+    .search-input:focus { outline: none; border-color: var(--brand); }
+  </style>
+</head>
+<body class="antialiased">
+
+  <!-- Login Screen -->
+  <div id="loginScreen" class="login-card">
+    <div class="flex items-center gap-2 mb-8">
+      <div class="w-8 h-8 rounded-lg bg-brand flex items-center justify-center text-white font-bold">✈</div>
+      <div class="font-bold text-lg tracking-tight display">EmptyLeg Admin</div>
+    </div>
+    <h2 class="text-lg font-bold mb-2">Sign in</h2>
+    <p class="text-sm text-muted mb-6">Enter your admin credentials to access the dashboard.</p>
+    <div class="form-group mb-4">
+      <label class="block text-sm font-medium mb-2">Email</label>
+      <input type="email" id="adminEmail" placeholder="admin@example.com" class="input">
+    </div>
+    <div class="form-group mb-6">
+      <label class="block text-sm font-medium mb-2">Password</label>
+      <input type="password" id="adminPassword" placeholder="••••••••" class="input">
+    </div>
+    <button id="loginBtn" class="btn btn-primary w-full">Sign in</button>
+    <p id="loginError" class="text-sm text-danger mt-3 text-center"></p>
+  </div>
+
+  <!-- Dashboard (hidden by default) -->
+  <div id="dashboard" class="hidden max-w-7xl mx-auto px-6 py-8">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+      <div>
+        <h1 class="display text-xl font-bold">Admin Dashboard</h1>
+        <p class="text-sm text-muted">Manage operator submissions and view marketplace analytics.</p>
+      </div>
+      <div class="flex gap-3">
+        <a href="/marketplace" class="btn btn-outline">View Marketplace</a>
+        <button id="logoutBtn" class="btn btn-outline">Sign Out</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div class="stat-card">
+        <div class="stat-value" id="statOffers">-</div>
+        <div class="stat-label">Live Offers</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statEnquiries">-</div>
+        <div class="stat-label">Total Enquiries</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statWaitlist">-</div>
+        <div class="stat-label">Waitlist Signups</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statSubmissions">-</div>
+        <div class="stat-label">Pending Submissions</div>
+      </div>
+    </div>
+
+    <!-- Search & Filter -->
+    <div class="flex gap-4 mb-6">
+      <input type="text" id="searchSubmissions" class="search-input flex-1" placeholder="Search operator, route, or aircraft...">
+      <select id="filterStatus" class="input">
+        <option value="">All Status</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+        <option value="live">Live</option>
+      </select>
+      <button id="refreshSubmissions" class="btn btn-primary">Refresh</button>
+    </div>
+
+    <!-- Pending Submissions -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+      <div class="lg:col-span-2">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-bold text-lg">Operator Submissions</h2>
+        </div>
+        <div class="card overflow-hidden">
+          <table>
+            <thead>
+              <tr>
+                <th>Operator</th>
+                <th>Route</th>
+                <th>Aircraft</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="submissionsTable">
+              <!-- Rows injected by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent Enquiries -->
+      <div class="lg:col-span-1">
+        <div class="card">
+          <h3 class="font-bold text-lg mb-4">Recent Enquiries</h3>
+          <div id="recentEnquiries" class="space-y-3">
+            <!-- Enquiries injected by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Waitlist -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div class="lg:col-span-2">
+        <div class="card">
+          <h3 class="font-bold text-lg mb-4">Recent Waitlist Signups</h3>
+          <div id="recentWaitlist" class="space-y-3">
+            <!-- Waitlist injected by JS -->
+          </div>
+        </div>
+      </div>
+      <div class="lg:col-span-1">
+        <div class="card">
+          <h3 class="font-bold text-lg mb-4">Quick Actions</h3>
+          <button id="exportBtn" class="btn btn-outline w-full mb-3">Export Data (CSV)</button>
+          <div class="mt-4 p-4 rounded-lg bg-slate-50 text-sm text-muted">
+            <p class="font-medium mb-2">WhatsApp Notifications</p>
+            <p class="mb-3">Use the "Copy WA Link" button next to any submission to notify the operator via WhatsApp.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Runtime configuration loader -->
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    const sb = window.supabase.createClient(
+      window.__ENV__?.SUPABASE_URL || '',
+      window.__ENV__?.SUPABASE_ANON_KEY || ''
+    );
+
+    const loginScreen = document.getElementById('loginScreen');
+    const dashboard = document.getElementById('dashboard');
+    const loginBtn = document.getElementById('loginBtn');
+    const adminEmail = document.getElementById('adminEmail');
+    const adminPassword = document.getElementById('adminPassword');
+    const loginError = document.getElementById('loginError');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4000);
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Copied to clipboard', 'success');
+      }).catch(() => {
+        showToast('Failed to copy', 'error');
+      });
+    }
+
+    // Check if already logged in
+    sb.auth.getSession().then(({ data: { session }, error }) => {
+      if (session && !error) {
+        loginScreen.classList.add('hidden');
+        dashboard.classList.remove('hidden');
+        loadDashboard();
+      }
+    });
+
+    loginBtn.addEventListener('click', async () => {
+      const email = adminEmail.value.trim();
+      const password = adminPassword.value;
+
+      if (!email || !password) {
+        loginError.textContent = 'Please enter email and password';
+        return;
+      }
+
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Signing in…';
+
+      try {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+
+        // Verify user has admin role
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user || !user.user_metadata?.role) {
+          await sb.auth.signOut();
+          throw new Error('Access denied: admin role required');
+        }
+
+        loginScreen.classList.add('hidden');
+        dashboard.classList.remove('hidden');
+        loadDashboard();
+      } catch (err) {
+        loginError.textContent = err.message || 'Invalid credentials';
+        adminPassword.value = '';
+        adminPassword.focus();
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Sign in';
+      }
+    });
+
+    adminPassword.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') loginBtn.click();
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      sessionStorage.removeItem('admin_authed');
+      dashboard.classList.add('hidden');
+      loginScreen.classList.remove('hidden');
+      adminEmail.value = '';
+      adminPassword.value = '';
+    });
+
+    async function loadDashboard() {
+      try {
+        const [offersRes, enquiriesRes, waitlistRes, submissionsRes] = await Promise.all([
+          fetch(`${window.__ENV__?.SUPABASE_URL}/functions/v1/offers`, { headers: authHeaders() }),
+          fetch(`${window.__ENV__?.SUPABASE_URL}/rest/v1/booking_enquiries?select=count`, { headers: authHeaders() }),
+          fetch(`${window.__ENV__?.SUPABASE_URL}/rest/v1/waitlist?select=count`, { headers: authHeaders() }),
+          fetch(`${window.__ENV__?.SUPABASE_URL}/functions/v1/operator-submissions`, { headers: authHeaders() })
+        ]);
+
+        const offers = await offersRes.json();
+        const enquiries = await enquiriesRes.json();
+        const waitlist = await waitlistRes.json();
+        const submissions = await submissionsRes.json();
+
+        document.getElementById('statOffers').textContent = offers.length;
+        document.getElementById('statEnquiries').textContent = enquiries[0]?.count || 0;
+        document.getElementById('statWaitlist').textContent = waitlist[0]?.count || 0;
+        document.getElementById('statSubmissions').textContent = submissions.length;
+
+        renderSubmissions(submissions);
+        renderEnquiries(enquiries);
+        renderWaitlist(waitlist);
+
+      } catch (err) {
+        console.error('Dashboard load error:', err);
+        showToast('Failed to load dashboard data', 'error');
+      }
+    }
+
+    function authHeaders() {
+      const headers = { 'Content-Type': 'application/json' };
+      return headers;
+    }
+
+    async function authedFetch(url, options = {}) {
+      const { data: { session } } = await sb.auth.getSession();
+      const headers = { 'Content-Type': 'application/json', ...options.headers };
+      if (session) {
+        headers['Authorization'] = 'Bearer ' + session.access_token;
+      }
+      return fetch(url, { ...options, headers });
+    }
+
+    function renderSubmissions(submissions) {
+      const tbody = document.getElementById('submissionsTable');
+      const search = document.getElementById('searchSubmissions').value.toLowerCase();
+      const statusFilter = document.getElementById('filterStatus').value;
+
+      const filtered = submissions.filter(s => {
+        const matchesSearch = !search ||
+          (s.operator_name && s.operator_name.toLowerCase().includes(search)) ||
+          (s.departure_city && s.departure_city.toLowerCase().includes(search)) ||
+          (s.destination_city && s.destination_city.toLowerCase().includes(search)) ||
+          (s.aircraft_type && s.aircraft_type.toLowerCase().includes(search));
+        const matchesStatus = !statusFilter || s.status === statusFilter;
+        return matchesSearch && matchesStatus;
+      });
+
+      if (!filtered || filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-8">No submissions found</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(s => {
+        const waLink = (s.metadata && s.metadata.whatsapp_link) ? s.metadata.whatsapp_link : '';
+        const waMsg = buildWhatsAppMsg(s);
+        const waButton = waLink
+          ? `<button class="btn btn-success btn-sm px-3 py-1.5" onclick="copyWaLink('${waLink.replace(/'/g, "\\'")}')" title="Copy WhatsApp notification link">📋 Copy WA Link</button>`
+          : `<button class="btn btn-ghost btn-sm px-3 py-1.5" onclick="showWaCustom('${s.id}','${(s.operator_name||'').replace(/'/g,"\\'")}','${(s.operator_phone||'').replace(/'/g,"\\'")}')" title="Generate WhatsApp link">💬 WA Link</button>`;
+        return `
+        <tr>
+          <td>
+            <div class="font-medium">${s.operator_name || 'Unknown'}</div>
+            <div class="text-xs text-muted">${s.operator_email || ''}</div>
+            <div class="text-xs text-muted">${s.operator_phone || ''}</div>
+          </td>
+          <td>
+            <div class="font-medium">${s.departure_city||''} → ${s.destination_city||''}</div>
+            <div class="text-xs text-muted">${new Date(s.departure_datetime||0).toLocaleDateString('en-IN')}</div>
+          </td>
+          <td>${s.aircraft_type||''} <span class="text-xs text-muted">(${s.aircraft_category||''})</span></td>
+          <td>₹${Number(s.empty_leg_price||0).toLocaleString('en-IN')}</td>
+          <td><span class="badge badge-${s.status}">${(s.status||'').charAt(0).toUpperCase() + (s.status||'').slice(1)}</span></td>
+          <td>
+            <div class="flex gap-2 flex-wrap">
+              ${waButton}
+              ${s.status === 'pending' ?
+                `<button onclick="updateSubmission('${s.id}', 'approved', this)" class="btn btn-success btn-sm px-3 py-1.5">Approve</button>
+                 <button onclick="updateSubmission('${s.id}', 'rejected', this)" class="btn btn-danger btn-sm px-3 py-1.5">Reject</button>` :
+                `<span class="text-xs text-muted">${(s.status||'').charAt(0).toUpperCase() + (s.status||'').slice(1)}</span>`}
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function buildWhatsAppMsg(submission) {
+      const op = submission.operator_name || 'Operator';
+      const route = `${submission.departure_city||''} → ${submission.destination_city||''}`;
+      const ac = `${submission.aircraft_type||''} (${submission.aircraft_category||''})`;
+      const price = '₹' + Number(submission.empty_leg_price||0).toLocaleString('en-IN');
+      const date = new Date(submission.departure_datetime||0).toLocaleString('en-IN');
+      return `*New Empty Leg Listing — ${op}*\n\nRoute: ${route}\nAircraft: ${ac}\nCapacity: ${submission.passenger_capacity||''} pax\nPrice: ${price}\nDate: ${date}\nStatus: ${submission.status||'pending'}\n\nReview: https://master.emptyleg-india.pages.dev/admin`;
+    }
+
+    window.showWaCustom = (id, opName, opPhone) => {
+      const msg = `*EmptyLeg India — New Listing Alert*\n\nOperator: ${opName}\nStatus: Pending Approval\n\nReview at: https://master.emptyleg-india.pages.dev/admin`;
+      const phone = (opPhone || '').replace(/\D/g, '').slice(-10);
+      if (!phone || phone.length < 10) {
+        showToast('Operator phone missing — add phone to submission', 'error');
+        return;
+      }
+      const link = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+      copyToClipboard(link);
+      showToast('WhatsApp link copied — send to operator', 'success');
+    };
+
+    function renderEnquiries(enquiries) {
+      const container = document.getElementById('recentEnquiries');
+      if (!enquiries || enquiries.length === 0) {
+        container.innerHTML = '<p class="text-xs text-muted text-center py-4">No enquiries yet</p>';
+        return;
+      }
+      const recent = enquiries.slice(0, 5);
+      container.innerHTML = recent.map(e => {
+        const msg = `*Enquiry from ${e.customer_name||'Guest'}*\nRoute: ${e.departure_city||''} → ${e.destination_city||''}\nPax: ${e.passenger_count||''}\nContact: ${e.customer_email||''}\nStatus: ${e.status||'NEW'}`;
+        const opPhone = (e.operator_contact || '').replace(/\D/g, '').slice(-10) || '';
+        const waLink = opPhone ? `https://wa.me/${opPhone}?text=${encodeURIComponent(msg)}` : '';
+        return `
+        <div class="flex justify-between items-start gap-2">
+          <div>
+            <div class="font-medium text-sm">${e.customer_name || 'Guest'}</div>
+            <div class="text-xs text-muted">${e.customer_email}</div>
+            <div class="text-xs text-muted">${e.customer_phone}</div>
+            <div class="text-xs text-brand font-medium">${e.passenger_count||0} pax • ${e.departure_city||''}→${e.destination_city||''}</div>
+          </div>
+          <div class="flex flex-col gap-1 items-end">
+            <div class="text-xs text-muted">${new Date(e.created_at||0).toLocaleDateString('en-IN')}</div>
+            ${waLink ? `<button class="btn btn-ghost btn-xs px-2 py-0.5 text-xs" onclick="copyWaLink('${waLink.replace(/'/g,"\\'")}')">📋 WA Link</button>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderWaitlist(waitlist) {
+      const container = document.getElementById('recentWaitlist');
+      if (!waitlist || waitlist.length === 0) {
+        container.innerHTML = '<p class="text-xs text-muted text-center py-4">No signups yet</p>';
+        return;
+      }
+      const recent = waitlist.slice(0, 5);
+      container.innerHTML = recent.map(w => `
+        <div class="flex justify-between items-start">
+          <div class="font-medium text-sm">${w.email}</div>
+          <div class="text-right">
+            <div class="text-xs text-muted">${new Date(w.created_at).toLocaleDateString('en-IN')}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    window.copyWaLink = (link) => {
+      copyToClipboard(link);
+    };
+
+    window.updateSubmission = async (id, status, btnEl) => {
+      const reviewNotes = prompt(`Enter review notes for ${status}:`);
+      if (reviewNotes === null) return;
+
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.textContent = 'Processing…';
+      }
+
+      try {
+        const res = await authedFetch(`${window.__ENV__?.SUPABASE_URL}/functions/v1/operator-submissions/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status, review_notes: reviewNotes })
+        });
+        const result = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(result.error || 'Failed');
+        showToast(`Submission ${status} successfully`);
+        loadDashboard();
+      } catch (err) {
+        showToast(err.message || 'Failed to update submission', 'error');
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.textContent = status === 'approved' ? 'Approve' : 'Reject';
+        }
+      }
+    };
+
+    document.getElementById('refreshSubmissions').addEventListener('click', loadDashboard);
+
+    document.getElementById('searchSubmissions').addEventListener('input', () => {
+      // Re-render with current submissions (stored in memory)
+      // We need to refetch to get filtered results from server
+      loadDashboard();
+    });
+
+    document.getElementById('filterStatus').addEventListener('change', loadDashboard);
+  </script>
+
+</body>
+</html>

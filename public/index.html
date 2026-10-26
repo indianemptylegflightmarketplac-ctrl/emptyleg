@@ -3,394 +3,390 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Indian Empty-Leg Flight Marketplace</title>
+  <title>EmptyLeg India — Private Jet Empty Leg Flights at Up to 75% Off</title>
+  <meta name="description" content="Book discounted private jet empty-leg flights in India. Fly Mumbai–Delhi, Bangalore–Goa, Delhi–Dubai and more. Verified operators, whole-aircraft charter, enquiry-only.">
+  <meta property="og:title" content="EmptyLeg India — Private Jet Empty Leg Flights at Up to 75% Off">
+  <meta property="og:description" content="Operator-confirmed empty-leg private jet flights across India. Mumbai–Delhi, Bangalore–Goa, Delhi–Dubai and more at up to 75% off normal charter prices.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://emptyleg-india.pages.dev/">
+  <meta property="og:image" content="https://emptyleg-india.pages.dev/og-image.svg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="EmptyLeg India — Private jet empty legs at up to 75% off">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@EmptyLegIndia">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <style>
+    :root {
+      --ink: #0b1628;
+      --ivory: #f7f4ef;
+      --amber: #c8a96e;
+      --amber-deep: #a8834a;
+      --muted: #6b6a5e;
+      --surface: #faf8f2;
+      --card: #fffef8;
+      --line: #ece8dc;
+      --text-main: #1a1f2e;
+      --text-sub: #6b6a5e;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #1a1a2e; line-height: 1.6; }
-    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-    header { background: #1a1a2e; color: #fff; padding: 24px 0; margin-bottom: 32px; }
-    header .container { display: flex; justify-content: space-between; align-items: center; }
-    h1 { font-size: 1.5rem; font-weight: 600; }
-    .subtitle { font-size: 0.875rem; opacity: 0.7; margin-top: 4px; }
-    .tagline { font-size: 0.875rem; color: #e8b444; }
-    main { display: grid; grid-template-columns: 1fr; gap: 24px; }
-    @media (min-width: 768px) { main { grid-template-columns: 280px 1fr; } }
-    .sidebar { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); height: fit-content; position: sticky; top: 100px; }
-    .filter-group { margin-bottom: 20px; }
-    .filter-group label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; margin-bottom: 8px; }
-    .filter-group select, .filter-group input { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.875rem; background: #fff; }
-    .filter-group input[type="number"] { -moz-appearance: textfield; }
-    .offers-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
-    @media (min-width: 640px) { .offers-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (min-width: 1024px) { .offers-grid { grid-template-columns: repeat(3, 1fr); } }
-    .offer-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: transform 0.2s, box-shadow 0.2s; }
-    .offer-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
-    .offer-header { background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%); color: #fff; padding: 16px; position: relative; }
-    .offer-category { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
-    .offer-route { font-size: 1.125rem; font-weight: 600; margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .offer-route i { opacity: 0.7; }
-    .offer-body { padding: 20px; }
-    .offer-aircraft { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-    .aircraft-icon { width: 48px; height: 48px; background: #f0f4f8; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
-    .aircraft-info h3 { font-size: 1rem; font-weight: 600; }
-    .aircraft-info p { font-size: 0.875rem; color: #6b7280; }
-    .offer-meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
-    .meta-item { background: #f9fafb; padding: 12px; border-radius: 8px; }
-    .meta-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; color: #6b7280; letter-spacing: 0.5px; }
-    .meta-value { font-size: 0.875rem; font-weight: 500; margin-top: 2px; }
-    .offer-price { background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
-    .price-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; color: #92400e; letter-spacing: 0.5px; }
-    .price-value { font-size: 1.5rem; font-weight: 700; color: #92400e; margin-top: 4px; }
-    .price-basis { font-size: 0.75rem; color: #b45309; margin-top: 4px; }
-    .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-    .btn-primary { background: #1a1a2e; color: #fff; }
-    .btn-primary:hover { background: #2d2d44; }
-    .btn:disabled { background: #d1d5db; cursor: not-allowed; }
-    .loading { text-align: center; padding: 40px; color: #6b7280; }
-    .error { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
-    .empty { text-align: center; padding: 60px 20px; color: #6b7280; }
-    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; }
-    .modal.open { opacity: 1; visibility: visible; }
-    .modal-content { background: #fff; border-radius: 12px; padding: 24px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
-    .modal h2 { font-size: 1.25rem; margin-bottom: 8px; }
-    .modal p { color: #6b7280; margin-bottom: 20px; font-size: 0.875rem; }
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-size: 0.8rem; font-weight: 500; margin-bottom: 6px; color: #374151; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.875rem; font-family: inherit; }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #1a1a2e; box-shadow: 0 0 0 3px rgba(26,26,46,0.1); }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
-    .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
-    .modal-actions .btn { flex: 1; }
-    .btn-secondary { background: #f3f4f6; color: #374151; }
-    .btn-secondary:hover { background: #e5e7eb; }
-    .success-modal .success-icon { width: 64px; height: 64px; background: #dcfce7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: #16a34a; font-size: 1.5rem; }
-    .success-modal h2 { text-align: center; }
-    .success-modal .enquiry-ref { text-align: center; font-family: monospace; background: #f3f4f6; padding: 12px; border-radius: 8px; margin: 16px 0; font-size: 0.875rem; }
-    .disclaimer { font-size: 0.7rem; color: #9ca3af; text-align: center; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text-main);
+      background: var(--ivory);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, .display { font-family: 'Cormorant Garamond', serif; font-weight: 300; letter-spacing: -0.01em; }
+    .display { letter-spacing: -0.03em; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border-radius: 6px; font-weight: 400; letter-spacing: 0.02em; transition: all 0.25s ease; cursor: pointer; border: 1px solid var(--line); font-family: 'DM Sans', sans-serif; font-size: 0.92rem; padding: 14px 28px; background: var(--ink); color: var(--ivory); }
+    .btn:hover { background: var(--text-main); transform: translateY(-2px); box-shadow: 0 8px 24px -6px rgba(11,22,40,0.18); }
+    .btn-primary { background: var(--ink); color: var(--ivory); border-color: var(--ink); }
+    .btn-outline { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+    .btn-outline:hover { background: var(--surface); }
+    .btn-ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+    .btn-gold { background: var(--gold); color: #fff; padding: 12px 24px; }
+    .btn-gold:hover { background: #b45309; }
+    .btn-sm { padding: 8px 16px; font-size: 0.875rem; }
+    .btn-loading { opacity: 0.75; pointer-events: none; }
+    .toast { position: fixed; bottom: 28px; right: 28px; padding: 14px 22px; border-radius: 12px; color: #fff; font-weight: 600; z-index: 2000; animation: slideIn 0.35s ease; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); }
+    .toast-success { background: var(--success); }
+    .toast-error { background: #dc2626; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
+    .card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .card-hover:hover { transform: translateY(-6px); box-shadow: 0 20px 35px -8px rgba(2,6,23,0.12); }
+    .gradient-text { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .glass { background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.5); }
+    .route-chip { cursor: pointer; transition: all 0.2s ease; }
+    .route-chip:hover { background: #eff6ff; border-color: var(--brand); color: var(--brand); }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .badge-verified { background: #ecfdf5; color: #065f46; border: 1px solid #bbf7d0; }
+    .badge-gold { background: #fdfbf7; color: #92400e; border: 1px solid #fde68a; }
+    .savings-pill { display: inline-flex; align-items: center; gap: 4px; background: #fef3c7; color: #92400e; font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; border: 1px solid #fde68a; }
+    .input { width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 1rem; background: #fff; transition: border-color 0.2s, box-shadow 0.2s; }
+    .input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(30,58,138,0.1); }
+    .skeleton { background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .trust-bar { display: flex; align-items: center; gap: 16px; padding: 12px 16px; background: #fff; border-bottom: 1px solid var(--slate-200); font-size: 0.8rem; color: var(--muted); flex-wrap: wrap; }
+    .trust-item { display: flex; align-items: center; gap: 6px; }
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
   </style>
 </head>
-<body>
-  <header>
-    <div class="container">
-      <div>
-        <h1>Indian Empty-Leg Flight Marketplace</h1>
-        <p class="subtitle">Enquiry-only MVP • Synthetic inventory for development</p>
+<body class="antialiased">
+
+  <!-- Skip link -->
+  <a href="#search" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-brand focus:text-white focus:rounded">Skip to search</a>
+  <style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>
+
+  <!-- Header -->
+  <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-brand flex items-center justify-center text-white font-bold text-lg">✈</div>
+        <div>
+          <div class="font-bold text-lg tracking-tight display">EmptyLeg India</div>
+          <div class="text-xs text-muted uppercase tracking-wider mt-0.5">Private Jet Empty Legs</div>
+        </div>
       </div>
-      <div class="tagline">Whole-aircraft charter only</div>
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+        <a href="#how" class="hover:text-brand transition">How it works</a>
+        <a href="#routes" class="hover:text-brand transition">Routes</a>
+        <a href="/marketplace" class="hover:text-brand transition">Browse Flights</a>
+        <a href="#list" class="hover:text-brand transition">List a Flight</a>
+      </nav>
+      <a href="/marketplace" class="btn btn-primary hidden sm:block">Search Empty Legs</a>
+      <button class="md:hidden text-brand font-medium" onclick="document.getElementById('mobileMenu').classList.toggle('hidden')">Menu</button>
+    </div>
+    <div id="mobileMenu" class="hidden md:hidden bg-white border-t border-slate-100 p-4">
+      <a href="#how" class="block py-2 text-brand hover:bg-slate-50 rounded">How it works</a>
+      <a href="#routes" class="block py-2 text-brand hover:bg-slate-50 rounded">Routes</a>
+      <a href="/marketplace" class="block py-2 text-brand hover:bg-slate-50 rounded">Browse Flights</a>
+      <a href="#list" class="block py-2 text-brand hover:bg-slate-50 rounded">List a Flight</a>
     </div>
   </header>
 
-  <div class="container">
-    <main>
-      <aside class="sidebar">
-        <div class="filter-group">
-          <label>Departure City</label>
-          <select id="departureFilter">
-            <option value="">All Cities</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label>Destination City</label>
-          <select id="destinationFilter">
-            <option value="">All Cities</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label>Aircraft Category</label>
-          <select id="categoryFilter">
-            <option value="">All Categories</option>
-            <option value="Light">Light</option>
-            <option value="Midsize">Midsize</option>
-            <option value="Heavy">Heavy</option>
-            <option value="Turboprop">Turboprop</option>
-            <option value="Ultra-Long Range">Ultra-Long Range</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label>Max Passengers</label>
-          <input type="number" id="passengerFilter" min="1" max="19" placeholder="Any">
-        </div>
-        <div class="filter-group">
-          <label>Max Price (INR)</label>
-          <input type="number" id="priceFilter" min="0" step="50000" placeholder="Any">
-        </div>
-      </aside>
-
-      <section>
-        <div id="error" class="error" style="display:none;"></div>
-        <div id="loading" class="loading">Loading offers...</div>
-        <div id="empty" class="empty" style="display:none;">No offers match your filters</div>
-        <div id="offersGrid" class="offers-grid" style="display:none;"></div>
-      </section>
-    </main>
+  <!-- Trust Bar -->
+  <div class="trust-bar">
+    <div class="trust-item"><span class="text-brand font-medium">✓</span> Operator-confirmed</div>
+    <div class="trust-item"><span class="text-brand font-medium">✓</span> Whole-aircraft only</div>
+    <div class="trust-item"><span class="text-brand font-medium">✓</span> No commissions</div>
+    <div class="trust-item"><span class="text-brand font-medium">✓</span> Enquiry only</div>
   </div>
 
-  <!-- Enquiry Modal -->
-  <div id="enquiryModal" class="modal">
-    <div class="modal-content">
-      <h2>Submit Booking Enquiry</h2>
-      <p>Fill in your details to submit an enquiry for this empty-leg offer. The operator will respond with a quote.</p>
-      <form id="enquiryForm">
-        <input type="hidden" name="offer_id" id="modalOfferId">
-        <div class="form-group">
-          <label>Full Name *</label>
-          <input type="text" name="customer_name" required>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Email *</label>
-            <input type="email" name="customer_email" required>
-          </div>
-          <div class="form-group">
-            <label>Phone *</label>
-            <input type="tel" name="customer_phone" required>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Company (Optional)</label>
-          <input type="text" name="customer_company">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Passengers *</label>
-            <input type="number" name="passenger_count" min="1" max="19" required>
-          </div>
-          <div class="form-group">
-            <label>Budget (INR, Optional)</label>
-            <input type="number" name="budget_max_amount" min="0" step="50000">
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Special Requests (Optional)</label>
-          <textarea name="special_requests" rows="3" placeholder="Any specific requirements..."></textarea>
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="modalCancel">Cancel</button>
-          <button type="submit" class="btn btn-primary">Submit Enquiry</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Success Modal -->
-  <div id="successModal" class="modal">
-    <div class="modal-content success-modal">
-      <div class="success-icon">✓</div>
-      <h2>Enquiry Submitted</h2>
-      <p>Your booking enquiry has been received. The operator will review and respond with a quote.</p>
-      <div class="enquiry-ref" id="enquiryRef"></div>
-      <div class="modal-actions">
-        <button class="btn btn-primary" id="successClose">Close</button>
+  <!-- Hero -->
+  <section class="relative bg-slate-900 text-white py-20 px-6 overflow-hidden">
+    <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1600&q=80')] bg-cover bg-center opacity-20"></div>
+    <div class="relative z-10 max-w-7xl mx-auto">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-semibold text-gold-glow mb-6">
+        <span class="w-2 h-2 rounded-full bg-gold-glow animate-pulse"></span>
+        Up to 75% off private jet charters
+      </div>
+      <h1 class="display text-4xl md:text-6xl font-bold leading-tight mb-6">Fly private for the price of business class.</h1>
+      <p class="text-lg md:text-xl text-slate-300 mb-10 max-w-2xl leading-relaxed">
+        Operator-confirmed empty-leg flights across India. Repositioning legs at a fraction of normal charter cost — Mumbai–Delhi, Bangalore–Goa, Delhi–Dubai and more.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/marketplace" class="btn btn-primary px-8 py-3 text-lg">Search Empty Legs <span>▸</span></a>
+        <a href="#list" class="btn btn-ghost px-8 py-3 text-lg">List Your Empty Leg</a>
+      </div>
+      <div class="mt-10 flex items-center justify-center gap-8 text-xs text-slate-400 font-medium">
+        <span><span class="font-bold text-white mr-1">4+</span> verified operators</span>
+        <span aria-hidden="true">•</span>
+        <span><span class="font-bold text-white mr-1">8+</span> live empty legs</span>
+        <span aria-hidden="true">•</span>
+        <span>Whole-aircraft charter only</span>
       </div>
     </div>
-  </div>
+  </section>
 
-  <p class="disclaimer">⚠️ This is a development MVP with synthetic flight offers. No real flights are available for booking. All data is for testing purposes only.</p>
+  <!-- Popular Routes -->
+  <section id="routes" class="py-16 px-6 bg-white">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex items-center justify-between mb-10">
+        <div>
+          <h2 class="display text-2xl md:text-3xl font-bold mb-2">Popular routes</h2>
+          <p class="text-muted">Depart from India's major hubs</p>
+        </div>
+        <a href="/marketplace" class="text-sm font-semibold text-brand hover:underline">View all flights →</a>
+      </div>
+      <div class="overflow-x-auto pb-4 scrollbar-hide" id="routesList">
+        <!-- route chips injected by JS -->
+      </div>
+    </div>
+  </section>
 
-  <!-- Runtime configuration loader (MUST load before app script) -->
+  <!-- How it works -->
+  <section id="how" class="py-16 px-6 bg-slate-50">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-14">
+        <h2 class="display text-2xl md:text-3xl font-bold mb-4">How empty legs work</h2>
+        <p class="text-muted max-w-2xl mx">Private jets fly empty to reposition for their next booking. You book that leg at a deep discount.</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="card-hover p-8 rounded-2xl bg-white border border-slate-100">
+          <div class="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-brand mb-4 text-xl">1</div>
+          <h3 class="font-semibold text-lg mb-3">Aircraft repositions</h3>
+          <p class="text-muted text-sm">A private jet drops off passengers and needs to fly to another city for its next trip — that empty leg is for sale.</p>
+        </div>
+        <div class="card-hover p-8 rounded-2xl bg-white border border-slate-100">
+          <div class="w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center text-gold mb-4 text-xl">2</div>
+          <h3 class="font-semibold text-lg mb-3">Deep discounts</h3>
+          <p class="text-muted text-sm">Operators sell empty legs at 40–75% off normal charter prices to recover repositioning costs.</p>
+        </div>
+        <div class="card-hover p-8 rounded-2xl bg-white border border-slate-100">
+          <div class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600 mb-4 text-xl">3</div>
+          <h3 class="font-semibold text-lg mb-3">You book</h3>
+          <p class="text-muted text-sm">Submit an enquiry and the operator confirms your whole-aircraft charter. No per-seat pricing.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="py-16 px-6 bg-white">
+    <div class="max-w-3xl mx-auto">
+      <div class="text-center mb-12">
+        <h2 class="display text-2xl md:text-3xl font-bold mb-4">Frequently Asked Questions</h2>
+        <p class="text-muted">Everything you need to know about booking empty-leg flights in India</p>
+      </div>
+      <div class="space-y-4">
+        <div class="card-hover p-6 rounded-xl bg-white border border-slate-100">
+          <button class="w-full flex justify-between items-start text-left" onclick="toggleFaq(this)">
+            <h3 class="font-semibold text-ink mb-2">What is an empty-leg flight?</h3>
+            <span class="text-sm text-muted">▾</span>
+          </button>
+          <div class="faq-answer hidden mt-3 text-sm text-muted leading-relaxed">
+            An empty leg is the return or repositioning flight of a private jet after dropping off passengers. Operators sell these at 40–75% off normal charter prices because the aircraft needs to fly anyway.
+          </div>
+        </div>
+        <div class="card-hover p-6 rounded-xl bg-white border border-slate-100">
+          <button class="w-full flex justify-between items-start text-left" onclick="toggleFaq(this)">
+            <h3 class="font-semibold text-ink mb-2">How much can I save?</h3>
+            <span class="text-sm text-muted">▾</span>
+          </button>
+          <div class="faq-answer hidden mt-3 text-sm text-muted leading-relaxed">
+            Empty legs in India typically sell at 40–75% below standard whole-aircraft charter rates. A Mumbai–Delhi leg that normally costs ₹12,00,000 might be available for ₹4,50,000.
+          </div>
+        </div>
+        <div class="card-hover p-6 rounded-xl bg-white border border-slate-100">
+          <button class="w-full flex justify-between items-start text-left" onclick="toggleFaq(this)">
+            <h3 class="font-semibold text-ink mb-2">Is this per-seat or whole aircraft?</h3>
+            <span class="text-sm text-muted">▾</span>
+          </button>
+          <div class="faq-answer hidden mt-3 text-sm text-muted leading-relaxed">
+            Whole-aircraft charter only. You book the entire aircraft, not individual seats. Pricing is for the full aircraft regardless of passenger count (up to capacity).
+          </div>
+        </div>
+        <div class="card-hover p-6 rounded-xl bg-white border border-slate-100">
+          <button class="w-full flex justify-between items-start text-left" onclick="toggleFaq(this)">
+            <h3 class="font-semibold text-ink mb-2">How do I book?</h3>
+            <span class="text-sm text-muted">▾</span>
+          </button>
+          <div class="faq-answer hidden mt-3 text-sm text-muted leading-relaxed">
+            Browse available empty legs, tap "Enquire Now," and submit your details. The operator will review and respond with a quote. No payment is processed on this platform.
+          </div>
+        </div>
+        <div class="card-hover p-6 rounded-xl bg-white border border-slate-100">
+          <button class="w-full flex justify-between items-start text-left" onclick="toggleFaq(this)">
+            <h3 class="font-semibold text-ink mb-2">Are operators verified?</h3>
+            <span class="text-sm text-muted">▾</span>
+          </button>
+          <div class="faq-answer hidden mt-3 text-sm text-muted leading-relaxed">
+            Yes. All operators and listings are reviewed and approved by our team before going live. Only verified operators can list empty legs on our marketplace.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- List your flight -->
+  <section id="list" class="py-16 px-6 bg-slate-900 text-white">
+    <div class="max-w-4xl mx-auto">
+      <div class="text-center mb-12">
+        <h2 class="display text-2xl md:text-3xl font-bold mb-4">Are you an operator?</h2>
+        <p class="text-slate-400">List your empty legs for free and reach customers looking for discounted private flights across India.</p>
+      </div>
+      <a href="/operator-list.html" class="inline-block bg-white text-brand-600 font-semibold px-8 py-3 rounded-lg hover:bg-slate-100 transition">
+        List Your Empty Leg →
+      </a>
+      <p class="text-center text-xs text-slate-500 mt-6">Enquiry-only marketplace — no commissions, no payments processed here.</p>
+    </div>
+  </section>
+
+  <!-- Waitlist -->
+  <section class="py-16 px-6 bg-white">
+    <div class="max-w-3xl mx-auto">
+      <div class="text-center mb-10">
+        <h2 class="display text-2xl md:text-3xl font-bold mb-4">New empty legs, first</h2>
+        <p class="text-muted">Join the waitlist and we'll notify you when operator-confirmed flights become available on your routes.</p>
+      </div>
+      <form id="waitlistForm" class="max-w-md mx-auto flex flex-col sm:flex-row gap-3">
+        <input type="email" id="waitlistEmail" name="email" placeholder="Your email address" required class="flex-1 input">
+        <button type="submit" id="waitlistBtn" class="btn btn-primary px-8">Join Waitlist</button>
+      </form>
+      <p class="text-center text-xs text-muted mt-4">We respect your privacy. No spam. Unsubscribe anytime.</p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200 bg-white py-12 px-6">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded-lg bg-brand flex items-center justify-center text-white font-bold">✈</div>
+          <div class="font-bold text-lg tracking-tight">EmptyLeg India</div>
+        </div>
+        <p class="text-xs text-muted">© 2026 EmptyLeg India. Synthetic inventory for development.</p>
+      </div>
+      <div class="flex justify-between text-xs text-muted border-t border-slate-100 pt-6">
+        <p>Contact: indianemptylegflightmarketplac@gmail.com</p>
+        <p>Enquiry-only marketplace — no real bookings or payments.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Runtime configuration loader -->
   <script src="config.js"></script>
-  <!-- Optional local override (create config.local.js from config.local.js.example) -->
   <script src="config.local.js"></script>
 
   <script>
-    // Configuration is validated and exposed via window.__ENV__ by config.js
-    // Required: SUPABASE_URL, SUPABASE_ANON_KEY
-    // NEVER embed pre-signed JWTs or signing secrets in browser-accessible code
-    
-    const SUPABASE_URL = window.__ENV__.SUPABASE_URL;
-    const SUPABASE_ANON_KEY = window.__ENV__.SUPABASE_ANON_KEY;
+    const SUPABASE_URL = window.__ENV__?.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = window.__ENV__?.SUPABASE_ANON_KEY;
 
-    let allOffers = [];
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.warn('[landing] Config not fully loaded — waitlist will not work');
+    }
 
-    async function fetchOffers() {
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4000);
+    }
+
+    // Waitlist form handler
+    document.getElementById('waitlistForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('waitlistBtn');
+      const emailInput = document.getElementById('waitlistEmail');
+      const email = emailInput.value.trim();
+
+      if (!email) { showToast('Please enter your email', 'error'); return; }
+
+      btn.classList.add('btn-loading');
+      btn.textContent = 'Joining...';
+
       try {
-        // Call Edge Function for offers (with anon key for public read)
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/offers`, {
-          headers: { 'apikey': SUPABASE_ANON_KEY }
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/waitlist`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+          body: JSON.stringify({ email, source: 'landing_page' })
         });
-        if (!res.ok) throw new Error('Failed to load offers');
-        allOffers = await res.json();
-        populateFilters();
-        renderOffers(allOffers);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Failed to join waitlist');
+        showToast(data.message || 'Successfully joined waitlist!');
+        emailInput.value = '';
       } catch (err) {
-        showError(err.message);
+        console.error('Waitlist error:', err);
+        showToast(err.message || 'Something went wrong. Please try again.', 'error');
+      } finally {
+        btn.classList.remove('btn-loading');
+        btn.textContent = 'Join Waitlist';
       }
-    }
+    });
 
-    function populateFilters() {
-      const departures = [...new Set(allOffers.map(o => o.departure_city).filter(Boolean))].sort();
-      const destinations = [...new Set(allOffers.map(o => o.destination_city).filter(Boolean))].sort();
-      
-      const depSelect = document.getElementById('departureFilter');
-      const destSelect = document.getElementById('destinationFilter');
-      
-      departures.forEach(city => depSelect.add(new Option(city, city)));
-      destinations.forEach(city => destSelect.add(new Option(city, city)));
-    }
-
-    function renderOffers(offers) {
-      const grid = document.getElementById('offersGrid');
-      const loading = document.getElementById('loading');
-      const empty = document.getElementById('empty');
-      
-      loading.style.display = 'none';
-      
-      if (offers.length === 0) {
-        grid.style.display = 'none';
-        empty.style.display = 'block';
-        return;
+    // FAQ toggle
+    window.toggleFaq = function(btn) {
+      const answer = btn.nextElementSibling;
+      const icon = btn.querySelector('span');
+      const isOpen = !answer.classList.contains('hidden');
+      if (isOpen) {
+        answer.classList.add('hidden');
+        icon.textContent = '▾';
+      } else {
+        answer.classList.remove('hidden');
+        icon.textContent = '▴';
       }
-      
-      empty.style.display = 'none';
-      grid.style.display = 'grid';
-      grid.innerHTML = offers.map(offer => `
-        <article class="offer-card" data-id="${offer.id}">
-          <div class="offer-header">
-            <span class="offer-category">${offer.aircraft_category}</span>
-            <div class="offer-route">
-              <strong>${offer.departure_city}</strong> <i>→</i> <strong>${offer.destination_city}</strong>
-            </div>
-          </div>
-          <div class="offer-body">
-            <div class="offer-aircraft">
-              <div class="aircraft-icon">✈</div>
-              <div class="aircraft-info">
-                <h3>${offer.aircraft_type}</h3>
-                <p>${offer.operator_name} • ${offer.operator_status}</p>
-              </div>
-            </div>
-            <div class="offer-meta">
-              <div class="meta-item">
-                <div class="meta-label">Departure</div>
-                <div class="meta-value">${formatDateTime(offer.departure_datetime)}</div>
-              </div>
-              <div class="meta-item">
-                <div class="meta-label">Arrival</div>
-                <div class="meta-value">${formatDateTime(offer.arrival_datetime)}</div>
-              </div>
-              <div class="meta-item">
-                <div class="meta-label">Capacity</div>
-                <div class="meta-value">${offer.passenger_capacity} passengers</div>
-              </div>
-              <div class="meta-item">
-                <div class="meta-label">Expires</div>
-                <div class="meta-value">${formatDate(offer.offer_expires_at)}</div>
-              </div>
-            </div>
-            <div class="offer-price">
-              <div class="price-label">Whole-Aircraft Charter</div>
-              <div class="price-value">${formatCurrency(offer.price_amount)} ${offer.price_currency}</div>
-              <div class="price-basis">Per aircraft (not per seat)</div>
-            </div>
-            <button class="btn btn-primary" onclick="openEnquiryModal('${offer.id}', ${offer.passenger_capacity})">Enquire Now</button>
-          </div>
-        </article>
+    };
+
+    // Popular routes data
+    const routes = [
+      { from: 'Mumbai', to: 'Delhi', price: '₹4,50,000', aircraft: 'Cessna Citation XLS+' },
+      { from: 'Bangalore', to: 'Goa', price: '₹1,80,000', aircraft: 'Pilatus PC-24' },
+      { from: 'Delhi', to: 'Dubai', price: '₹12,00,000', aircraft: 'Gulfstream G280' },
+      { from: 'Mumbai', to: 'Singapore', price: '₹15,00,000', aircraft: 'Bombardier Challenger 350' },
+      { from: 'Dehradun', to: 'Delhi', price: '₹1,20,000', aircraft: 'Beechcraft King Air B200' },
+      { from: 'Chennai', to: 'Bangalore', price: '₹2,20,000', aircraft: 'Embraer Phenom 300' },
+    ];
+
+    function renderRoutes() {
+      const container = document.getElementById('routesList');
+      container.innerHTML = routes.map(r => `
+        <a href="/marketplace?from=${encodeURIComponent(r.from)}&to=${encodeURIComponent(r.to)}" class="route-chip inline-flex items-center gap-2 px-4 py-3 mr-3 mb-3 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-medium whitespace-nowrap hover:shadow-md">
+          <span class="w-1.5 h-2 rounded-full bg-brand"></span>
+          <span>${r.from} → ${r.to}</span>
+          <span class="ml-auto text-gold font-bold">${r.price}</span>
+        </a>
       `).join('');
     }
 
-    function filterOffers() {
-      const dep = document.getElementById('departureFilter').value;
-      const dest = document.getElementById('destinationFilter').value;
-      const cat = document.getElementById('categoryFilter').value;
-      const pax = parseInt(document.getElementById('passengerFilter').value) || 0;
-      const price = parseInt(document.getElementById('priceFilter').value) || Infinity;
-
-      let filtered = allOffers.filter(o => {
-        if (dep && o.departure_city !== dep) return false;
-        if (dest && o.destination_city !== dest) return false;
-        if (cat && o.aircraft_category !== cat) return false;
-        if (pax && o.passenger_capacity < pax) return false;
-        if (o.price_amount > price) return false;
-        return true;
-      });
-      renderOffers(filtered);
-    }
-
-    function openEnquiryModal(offerId, maxPassengers) {
-      document.getElementById('modalOfferId').value = offerId;
-      document.getElementById('enquiryForm').reset();
-      // Cap at 19 to match database constraint
-      document.querySelector('[name="passenger_count"]').max = Math.min(maxPassengers, 19);
-      document.getElementById('enquiryModal').classList.add('open');
-    }
-
-    function closeModal(modalId) {
-      document.getElementById(modalId).classList.remove('open');
-    }
-
-    document.getElementById('enquiryForm').addEventListener('submit', async (e) => {
+    document.getElementById('heroSearchForm')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const formData = new FormData(e.target);
-      const body = Object.fromEntries(formData);
-      body.passenger_count = parseInt(body.passenger_count);
-      if (body.budget_max_amount && body.budget_max_amount.trim()) {
-        body.budget_max_amount = parseFloat(body.budget_max_amount);
-      } else {
-        delete body.budget_max_amount;
-      }
-
-      const btn = e.target.querySelector('button[type="submit"]');
-      btn.disabled = true;
-      btn.textContent = 'Submitting...';
-
-      try {
-        // Call Edge Function for enquiry submission (handles validation atomically)
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/enquiries`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json', 
-            'apikey': SUPABASE_ANON_KEY
-          },
-          body: JSON.stringify(body)
-        });
-        const result = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(result.error || `Server error: ${res.status}`);
-        }
-        
-        closeModal('enquiryModal');
-        document.getElementById('enquiryRef').textContent = `Enquiry submitted successfully (Ref: ${result.enquiry_id}). The operator will review and respond with a quote.`;
-        document.getElementById('successModal').classList.add('open');
-      } catch (err) {
-        // Don't expose internal errors to user
-        alert('Failed to submit enquiry. Please try again.');
-        console.error('Enquiry submission error:', err);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Submit Enquiry';
-      }
+      const from = document.getElementById('heroFrom').value.trim();
+      const to = document.getElementById('heroTo').value.trim();
+      const params = new URLSearchParams();
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+      window.location.href = '/marketplace' + (params.toString() ? '?' + params.toString() : '');
     });
 
-    document.getElementById('modalCancel').addEventListener('click', () => closeModal('enquiryModal'));
-    document.getElementById('successClose').addEventListener('click', () => closeModal('successModal'));
-
-    ['departureFilter', 'destinationFilter', 'categoryFilter', 'passengerFilter', 'priceFilter'].forEach(id => {
-      document.getElementById(id).addEventListener('change', filterOffers);
-    });
-
-    function formatDateTime(iso) {
-      if (!iso) return '-';
-      const d = new Date(iso);
-      return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-    }
-    function formatDate(iso) {
-      if (!iso) return '-';
-      const d = new Date(iso);
-      return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    }
-    function formatCurrency(num) {
-      return new Intl.NumberFormat('en-IN').format(num);
-    }
-    function showError(msg) {
-      document.getElementById('loading').style.display = 'none';
-      const el = document.getElementById('error');
-      el.textContent = msg;
-      el.style.display = 'block';
-    }
-
-    // Initialize
-    fetchOffers();
+    renderRoutes();
   </script>
 </body>
 </html>

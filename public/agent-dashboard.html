@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>Agent Dashboard — EmptyLeg India</title>
+<script src="../config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>body{font-family:system-ui,sans-serif;background:#f8fafc;color:#0f172a;padding:2rem}.card{background:#fff;border-radius:12px;padding:1.5rem;border:1px solid #e2e8f0;margin-bottom:1rem}h1{font-family:'Space Grotesk',sans-serif}</style>
+</head><body>
+<h1>Agent Dashboard (EmptyLeg India)</h1>
+<div class="card"><h2>Agent 1 — Prospects</h2><div id="p1">Loading...</div></div>
+<div class="card"><h2>Agent 3 — Pending Submissions (auto-verify)</h2><div id="p3">Loading...</div></div>
+<div class="card"><h2>Agent 5 — Deals Awaiting Owner Approval</h2><div id="p5">Loading...</div></div>
+<div class="card"><h2>Agent 8 — Weekly Insight</h2><div id="p8">Loading...</div></div>
+<script>
+const sb = window.supabase.createClient(window.__ENV__.SUPABASE_URL, window.__ENV__.SUPABASE_ANON_KEY);
+async function load() {
+  try {
+    const {data:p} = await sb.from('agent_lead_prospects').select('*').limit(50);
+    document.getElementById('p1').textContent = 'Total prospects: '+(p?.length||0) + (p?.length ? ' (see DB)' : '');
+    const {data:s} = await sb.from('operator_listing_submissions').select('*').eq('status','pending').limit(50);
+    document.getElementById('p3').textContent = 'Pending listings: '+(s?.length||0)+' — Agent 3 can auto-verify';
+    const {data:d} = await sb.from('agent_deal_summaries').select('*').eq('deal_status','awaiting_owner').limit(50);
+    document.getElementById('p5').textContent = 'Deals awaiting owner approval: '+(d?.length||0)+' — approve in /admin';
+    const {data:i} = await sb.from('agent_insights').select('*').order('created_at',{ascending:false}).limit(1);
+    document.getElementById('p8').textContent = i?.[0] ? 'Week: '+i[0].week_start+' | Enquiries: '+(i[0].enquiry_count||0)+' | Deals: '+(i[0].deal_summary_count||0) + ' | Rec: '+(i[0].recommendations||'N/A').substring(0,60) : 'No insight yet (Agent 8 writes weekly)';
+    document.body.insertAdjacentHTML('beforeend','<div class="card"><h2>Agent Status (8 agents)</h2><ul><li>Agent 1 (LeadGen) — operational</li><li>Agent 2 (Outreach) — operational</li><li>Agent 3 (Verify) — operational</li><li>Agent 4 (Enquiry) — operational</li><li>Agent 5 (Closer) — operational — deals await owner</li><li>Agent 6 (WA) — operational</li><li>Agent 7 (Content) — operational</li><li>Agent 8 (Analytics) — operational</li></ul></div>');
+  } catch(e){console.error('Agent dashboard load error',e); document.getElementById('p1').textContent='DB load failed — check config';}
+}
+load();
+</script>
+</body></html>

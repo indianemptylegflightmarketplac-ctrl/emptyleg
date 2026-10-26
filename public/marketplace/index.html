@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Empty Leg Flights India | Browse Available Empty Legs</title>
+  <meta name="description" content="Browse operator-confirmed private jet empty-leg flights across India. Mumbai–Delhi, Bangalore–Goa, Delhi–Dubai and more. Whole-aircraft charter.">
+  <meta property="og:title" content="Empty Leg Flights India | Browse Available Empty Legs">
+  <meta property="og:description" content="Operator-confirmed private jet empty-leg flights across India. Mumbai–Delhi, Bangalore–Goa, Delhi–Dubai and more. Whole-aircraft charter at up to 75% off.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://emptyleg-india.pages.dev/marketplace/">
+  <meta property="og:image" content="https://emptyleg-india.pages.dev/og-image.svg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="EmptyLeg India — Private jet empty legs at up to 75% off">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@EmptyLegIndia">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #64748b;
+      --brand: #0b1628;
+      --brand-600: #151e2e;
+      --brand-600: #1e40af;
+      --gold: #d97706;
+      --gold-glow: #fcd34d;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --success: #15803d;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      color: var(--ink);
+      background: var(--slate-50);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 90px;
+    }
+    h1, h2, h3, .display { font-family: 'Cormorant Garamond', serif; }
+    .display { letter-spacing: -0.02em; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 10px; font-weight: 600; transition: all 0.2s ease; cursor: pointer; border: none; font-size: 0.95rem; }
+    .btn-primary { background: var(--brand); color: #fff; padding: 12px 24px; box-shadow: 0 4px 14px -2px rgba(30,58,138,0.35); }
+    .btn-primary:hover { background: var(--brand-600); transform: translateY(-1px); box-shadow: 0 6px 20px -2px rgba(30,58,138,0.45); }
+    .btn-primary:active { transform: translateY(0); box-shadow: 0 2px 8px -2px rgba(30,58,138,0.3); }
+    .btn-outline { background: #fff; color: var(--brand); border: 2px solid var(--brand); padding: 12px 24px; }
+    .btn-outline:hover { background: #f8fafc; }
+    .btn-sm { padding: 10px 20px; font-size: 0.875rem; }
+    .btn-loading { opacity: 0.75; pointer-events: none; }
+    .toast { position: fixed; bottom: 28px; right: 28px; padding: 14px 22px; border-radius: 12px; color: #fff; font-weight: 600; z-index: 2000; animation: slideIn 0.35s ease; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); }
+    .toast-success { background: var(--success); }
+    .toast-error { background: #dc2626; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
+    .card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+    .card-hover:hover { transform: translateY(-8px); box-shadow: 0 24px 40px -10px rgba(2,6,23,0.14); border-color: rgba(30,58,138,0.12); }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .badge-verified { background: #ecfdf5; color: #065f46; border: 1px solid #bbf7d0; }
+    .badge-gold { background: #fdfbf7; color: #92400e; border: 1px solid #fde68a; }
+    .savings-pill { display: inline-flex; align-items: center; gap: 4px; background: #fef3c7; color: #92400e; font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; border: 1px solid #fde68a; }
+    .input { width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 1rem; background: #fff; transition: border-color 0.2s, box-shadow 0.2s; }
+    .input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(30,58,138,0.1); }
+    .skeleton { background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; height: 16px; }
+    .skeleton-text { height: 1rem; border-radius: 4px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,0.45); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 60; opacity: 0; visibility: hidden; transition: opacity 0.25s, visibility 0.25s; }
+    .modal-backdrop.open { opacity: 1; visibility: visible; }
+    .modal { background: #fff; border-radius: 16px; width: 92%; max-width: 480px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(2,6,23,0.25); transform: translateY(10px); opacity: 0; transition: transform 0.25s, opacity 0.25s; }
+    .modal-backdrop.open .modal { transform: translateY(0); opacity: 1; }
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+    /* Skeleton cards */
+    .skeleton-card {
+      background: #fff;
+      border: 1px solid var(--slate-100);
+      border-radius: 16px;
+      overflow: hidden;
+      height: 440px;
+      display: flex;
+      flex-direction: column;
+    }
+    .skeleton-img { height: 200px; background: #e2e8f0; }
+    .skeleton-line { height: 16px; border-radius: 4px; margin-bottom: 12px; background: #e2e8f0; }
+    .skeleton-line.w-3/4 { width: 75%; }
+    .skeleton-line.w-full { width: 100%; }
+    .skeleton-line.w-1/2 { width: 50%; }
+    .skeleton-badge { height: 24px; width: 140px; border-radius: 999px; background: #e2e8f0; margin-bottom: 16px; }
+
+    /* Price compare (was-now) */
+    .price-compare { display: flex; align-items: baseline; gap: 6px; }
+    .original-price { font-size: 0.875rem; color: var(--muted); text-decoration: line-through; font-weight: 500; }
+    .savings-badge { font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; background: #ecfdf5; color: #065f46; border: 1px solid #bbf7d0; }
+
+    /* Last updated */
+    .last-updated { font-size: 0.75rem; color: var(--muted); font-weight: 500; display: flex; align-items: center; gap: 6px; }
+    .last-updated::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
+
+    /* Better empty state */
+    .empty-state { text-align: center; padding: 56px 24px; }
+    .empty-icon { width: 72px; height: 72px; border-radius: 50%; background: #f1f5f9; color: var(--muted); display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto 20px; }
+    .empty-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.375rem; font-weight: 700; color: var(--ink); margin-bottom: 10px; }
+    .empty-desc { color: var(--muted); font-size: 1rem; margin-bottom: 28px; line-height: 1.6; max-width: 480px; margin-left: auto; margin-right: auto; }
+    .empty-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    /* Mobile sticky enquire bar */
+    .mobile-sticky-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-top: 1px solid var(--slate-200);
+      padding: 12px 16px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+      box-shadow: 0 -4px 12px -2px rgba(2,6,23,0.08);
+    }
+    @media (max-width: 768px) {
+      .mobile-sticky-bar { display: flex; }
+      body { padding-bottom: 70px; }
+    }
+    .sticky-bar-text { font-size: 0.875rem; font-weight: 600; color: var(--ink); }
+    .sticky-bar-hint { font-size: 0.75rem; color: var(--muted); }
+    .sticky-bar-btn { background: var(--brand); color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 0.875rem; cursor: pointer; }
+    .sticky-bar-btn:hover { background: var(--brand-600); }
+    .sticky-dismiss { background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px; font-size: 1.25rem; line-height: 1; }
+    .sticky-dismiss:hover { color: var(--brand); }
+
+    /* Operator avatar placeholder */
+    .operator-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--brand), #3b82f6); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.85rem; font-weight: 700; flex-shrink: 0; }
+
+    /* Trust bar */
+    .trust-bar { display: flex; align-items: center; gap: 16px; padding: 12px 16px; background: #fff; border-bottom: 1px solid var(--slate-200); font-size: 0.8rem; color: var(--muted); }
+    .trust-item { display: flex; align-items: center; gap: 6px; }
+
+    /* Mobile drawer filter */
+    .mobile-filter-trigger {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid var(--slate-200);
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-weight: 600;
+      color: var(--brand);
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      .mobile-filter-trigger { display: inline-flex; }
+      .filters-sidebar { display: none; }
+    }
+    .filter-drawer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      z-index: 50;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      box-shadow: 4px 0 20px -4px rgba(2,6,23,0.1);
+    }
+    .filter-drawer.open { transform: translateX(0); }
+    .filter-drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.3);
+      z-index: 49;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .filter-drawer-overlay.open { opacity: 1; }
+  </style>
+</head>
+<body class="antialiased">
+
+  <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-brand focus:text-white focus:rounded">Skip to main content</a>
+
+  <!-- Header -->
+  <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-brand flex items-center justify-center text-white font-bold text-lg">✈</div>
+        <div class="font-bold text-lg tracking-tight display">EmptyLeg India</div>
+      </a>
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+        <a href="/#how" class="hover:text-brand transition">How it works</a>
+        <a href="/#routes" class="hover:text-brand transition">Routes</a>
+        <a href="/#list" class="hover:text-brand transition">List a Flight</a>
+      </nav>
+      <a href="/operator-list.html" class="btn btn-outline hidden md:block">List Your Empty Leg</a>
+      <a href="/" class="btn btn-outline btn-sm hidden md:block">Back to Home</a>
+      <button class="md:hidden text-brand font-medium" onclick="document.getElementById('mobileMenu').classList.toggle('hidden')">Menu</button>
+    </div>
+    <div id="mobileMenu" class="hidden md:hidden bg-white border-t border-slate-100 p-4">
+      <a href="#how" class="block py-2 text-brand hover:bg-slate-50 rounded">How it works</a>
+      <a href="/#routes" class="block py-2 text-brand hover:bg-slate-50 rounded">Routes</a>
+      <a href="/#list" class="block py-2 text-brand hover:bg-slate-50 rounded">List a Flight</a>
+      <a href="/operator-list.html" class="block py-2 text-brand hover:bg-slate-50 rounded">Operator Listing</a>
+    </div>
+  </header>
+
+  <!-- Trust Bar -->
+  <div class="trust-bar">
+    <div class="trust-item"><span class="text-brand font-medium">✓</span> Operator-confirmed</div>
+    <div class="trust-item"><span class="text-brand font-medium">✓</span> Whole-aircraft only</div>
+    <div class="trust-item"><span class="text-brand font-medium">✓</span> No commissions</div>
+    <div class="trust-item"><span class="text-brand font-medium">✓</span> Enquiry only</div>
+  </div>
+
+  <!-- Hero banner -->
+  <section class="bg-brand py-10 px-6 text-white">
+    <div class="max-w-7xl mx-auto">
+      <p class="text-center text-sm font-medium mb-2">Operator-confirmed empty-leg flights • Whole-aircraft charter only</p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
+        <input type="text" id="searchFrom" placeholder="From (e.g. Mumbai)" class="flex-1 input text-slate-900">
+        <input type="text" id="searchTo" placeholder="To (e.g. Delhi)" class="flex-1 input text-slate-900">
+        <button onclick="applyQuickSearch()" class="btn btn-primary px-6">Search</button>
+      </div>
+      <p class="text-center text-xs text-blue-200 mt-3">Pre-filtered results open with your route selected.</p>
+    </div>
+  </section>
+
+  <!-- Main content -->
+  <main id="main" class="max-w-7xl mx-auto px-6 py-12">
+    <div id="error" class="hidden bg-red-50 border border-red-100 text-red-700 rounded-xl px-4 py-3 mb-6 text-sm"></div>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+      <!-- Filters sidebar -->
+      <aside class="lg:w-72 flex-shrink-0 filters-sidebar">
+        <div class="sticky top-24">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-bold text-lg display">Filters</h2>
+            <button id="resetFilters" class="text-xs text-brand font-medium hover:underline">Reset</button>
+          </div>
+          <div class="space-y-4">
+            <div class="form-group">
+              <label class="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Departure city</label>
+              <select id="departureFilter" class="input"><option value="">All cities</option></select>
+            </div>
+            <div class="form-group">
+              <label class="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Destination city</label>
+              <select id="destinationFilter" class="input"><option value="">All cities</option></select>
+            </div>
+            <div class="form-group">
+              <label class="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Aircraft category</label>
+              <select id="categoryFilter" class="input">
+                <option value="">All categories</option>
+                <option value="Light">Light</option>
+                <option value="Midsize">Midsize</option>
+                <option value="Heavy">Heavy</option>
+                <option value="Turboprop">Turboprop</option>
+                <option value="Ultra-Long Range">Ultra-Long Range</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Max passengers</label>
+              <input type="number" id="passengerFilter" min="1" max="19" placeholder="Any" class="input">
+            </div>
+            <div class="form-group">
+              <label class="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Max price (INR)</label>
+              <input type="number" id="priceFilter" min="0" step="50000" placeholder="Any" class="input">
+            </div>
+          </div>
+          <div class="mt-6 p-4 rounded-xl bg-slate-50 border border-slate-100 text-sm text-muted">
+            <p class="font-medium text-ink mb-2">How to enquire</p>
+            <ol class="list-disc list-inside space-y-1 text-xs">
+              <li>Tap <strong>Enquire Now</strong> on any flight</li>
+              <li>Fill in your details (1–19 passengers)</li>
+              <li>Operator confirms your charter</li>
+            </ol>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Mobile filter trigger -->
+      <button class="mobile-filter-trigger" onclick="toggleFilterDrawer()">
+        <span>Filters</span>
+        <span id="filterCountBadge" class="w-2 h-2 rounded-full bg-brand" style="display:none;"></span>
+      </button>
+
+      <!-- Filter drawer (mobile) -->
+      <div class="filter-drawer-overlay" id="filterDrawerOverlay" onclick="toggleFilterDrawer()"></div>
+      <div class="filter-drawer" id="filterDrawer">
+        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+          <h2 class="font-bold text-lg display">Filters</h2>
+          <button onclick="toggleFilterDrawer()" class="text-muted">×</button>
+        </div>
+        <div class="p-6 space-y-5">
+          <div class="form-group">
+            <label class="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Departure city</label>
+            <select id="drawerDepartureFilter" class="input"><option value="">All cities</option></select>
+          </div>
+          <div class="form-group">
+            <label class="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Destination city</label>
+            <select id="drawerDestinationFilter" class="input"><option value="">All cities</option></select>
+          </div>
+          <div class="form-group">
+            <label class="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Aircraft category</label>
+            <select id="drawerCategoryFilter" class="input">
+              <option value="">All categories</option>
+              <option value="Light">Light</option>
+              <option value="Midsize">Midsize</option>
+              <option value="Heavy">Heavy</option>
+              <option value="Turboprop">Turboprop</option>
+              <option value="Ultra-Long Range">Ultra-Long Range</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Max passengers</label>
+            <input type="number" id="drawerPassengerFilter" min="1" max="19" placeholder="Any" class="input">
+          </div>
+          <div class="form-group">
+            <label class="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Max price (INR)</label>
+            <input type="number" id="drawerPriceFilter" min="0" step="50000" placeholder="Any" class="input">
+          </div>
+          <div class="flex gap-3 pt-6">
+            <button onclick="resetFilters()" class="btn btn-outline flex-1">Reset</button>
+            <button onclick="applyFiltersFromDrawer(); toggleFilterDrawer()" class="btn btn-primary flex-1">Apply Filters</button>
+          </button>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <section class="flex-1 min-w-0">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 id="resultsCount" class="display text-xl md:text-2xl font-bold">Available empty legs</h2>
+            <div class="flex items-center gap-2 mt-1">
+              <span id="lastUpdated" class="last-updated hidden">Last updated <span id="lastUpdatedAgo">just now</span></span>
+            </div>
+            <p id="resultsSubtitle" class="text-muted text-sm mt-1">Showing all available flights</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-muted uppercase tracking-wider px-3 py-1.5 rounded-full border border-slate-200 bg-slate-50" id="sortLabel">Sort: Departure</span>
+          </div>
+        </div>
+
+        <!-- Loading skeleton -->
+        <div id="loading" class="flex flex-col items-center gap-4 py-10">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+            <div class="skeleton-card"><div class="skeleton-img"></div><div class="p-5"><div class="skeleton-line w-full"></div><div class="skeleton-line w-3/4"></div><div class="skeleton-line w-1/2"></div><div class="skeleton-line w-full mt-4 h-24"></div></div></div>
+            <div class="skeleton-card"><div class="skeleton-img"></div><div class="p-5"><div class="skeleton-line w-full"></div><div class="skeleton-line w-3/4"></div><div class="skeleton-line w-1/2"></div><div class="skeleton-line w-full mt-4 h-24"></div></div></div>
+            <div class="skeleton-card"><div class="skeleton-img"></div><div class="p-5"><div class="skeleton-line w-full"></div><div class="skeleton-line w-3/4"></div><div class="skeleton-line w-1/2"></div><div class="skeleton-line w-full mt-4 h-24"></div></div></div>
+          </div>
+        </div>
+
+        <!-- Better empty state -->
+        <div id="empty" class="hidden empty-state">
+          <div class="empty-icon">✈</div>
+          <div class="empty-title">No flights match your filters</div>
+          <p class="empty-desc">Try relaxing your filters — adjust the passenger count, price, or aircraft category to see more empty legs.</p>
+          <div class="empty-actions">
+            <button onclick="resetFilters()" class="btn btn-primary btn-sm">Reset filters</button>
+            <a href="/#waitlist" class="btn btn-outline btn-sm">Join waitlist</a>
+          </div>
+        </div>
+
+        <div id="offersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- CTA band -->
+  <section class="bg-brand py-12 px-6">
+    <div class="max-w-7xl mx-auto bg-brand-600 rounded-2xl p-8 md:p-12 text-white shadow-lg shadow-brand/20 overflow-hidden">
+      <div class="grid md:grid-cols-3 gap-8 items-center">
+        <div>
+          <h2 class="display text-xl md:text-2xl font-bold mb-3">List your empty leg</h2>
+          <p class="text-blue-100 text-sm">Operators: list repositioning flights for free.</p>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold display mb-1">₹0</div>
+          <div class="text-xs text-blue-200">Listing fee</div>
+        </div>
+        <div class="text-center">
+          <a href="/operator-list.html" class="inline-flex items-center gap-2 btn btn-gold px-6 py-3">List Your Empty Leg</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200 bg-white py-10 px-6">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded-lg bg-brand flex items-center justify-center text-white font-bold">✈</div>
+          <div class="font-bold text-lg tracking-tight">EmptyLeg India</div>
+        </div>
+        <div class="flex gap-6 text-xs text-muted">
+          <span>© 2026 EmptyLeg India</span>
+          <span>•</span>
+          <span>Contact: indianemptylegflightmarketplac@gmail.com</span>
+          <span>•</span>
+          <span>Synthetic inventory for development</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Runtime configuration loader -->
+  <script src="../config.js"></script>
+
+  <!-- Mobile sticky enquire bar -->
+  <div id="mobileStickyBar" class="mobile-sticky-bar">
+    <div class="flex items-center gap-3 flex-1">
+      <span class="sticky-bar-hint">Questions?</span>
+      <span class="sticky-bar-text">Enquire about a flight</span>
+    </div>
+    <button id="stickyEnquireBtn" class="sticky-bar-btn">Enquire Now</button>
+    <button id="stickyDismiss" class="sticky-dismiss" title="Hide">&times;</button>
+  </div>
+
+  <!-- Enquiry Modal -->
+  <div id="enquiryModalBackdrop" class="modal-backdrop">
+    <div class="modal p-6">
+      <h2 class="display text-lg font-bold mb-2">Submit Booking Enquiry</h2>
+      <p class="text-muted text-sm mb-6">The operator will review your enquiry and respond with a quote.</p>
+      <form id="enquiryForm">
+        <input type="hidden" name="offer_id" id="modalOfferId">
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-muted mb-1">Aircraft</label>
+          <div class="pl-4 border-l-2 border-brand font-medium text-sm" id="modalAircraft"></div>
+        </div>
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-muted mb-1">Full Name *</label>
+          <input type="text" name="customer_name" required class="input">
+        </div>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-xs font-semibold text-muted mb-1">Email *</label>
+            <input type="email" name="customer_email" required class="input">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-muted mb-1">Phone *</label>
+            <input type="tel" name="customer_phone" required class="input">
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-muted mb-1">Company (Optional)</label>
+          <input type="text" name="customer_company" class="input">
+        </div>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-xs font-semibold text-muted mb-1">Passengers *</label>
+            <input type="number" name="passenger_count" min="1" max="19" required class="input">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-muted mb-1">Budget (INR, Optional)</label>
+            <input type="number" name="budget_max_amount" min="0" step="50000" class="input">
+          </div>
+        </div>
+        <div class="mb-6">
+          <label class="block text-xs font-semibold text-muted mb-1">Special Requests (Optional)</label>
+          <textarea name="special_requests" rows="3" class="input" placeholder="Any specific requirements..."></textarea>
+        </div>
+        <div class="flex gap-3">
+          <button type="button" class="btn btn-outline flex-1" id="modalCancel">Cancel</button>
+          <button type="submit" class="btn btn-primary flex-1">Submit Enquiry</button>
+        </div>
+        <p class="text-[10px] text-muted mt-4 text-center">Enquiry-only. No payment processed on this platform.</p>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = window.__ENV__?.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = window.__ENV__?.SUPABASE_ANON_KEY;
+
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.warn('[marketplace] Config not fully loaded — flights will not load');
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4000);
+    }
+
+    function formatDateTime(iso) {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+    function formatCurrency(num) {
+      return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(num);
+    }
+
+    // Estimate original charter price
+    function estimateOriginalPrice(offer) {
+      const baseRates = {
+        'Light': 350000,
+        'Midsize': 550000,
+        'Heavy': 900000,
+        'Turboprop': 250000,
+        'Ultra-Long Range': 1400000,
+      };
+      const routeKey = offer.departure_city + '→' + offer.destination_city;
+      const routeHours = {
+        'Mumbai→Delhi': 2.0, 'Delhi→Mumbai': 2.0,
+        'Bengaluru→Hyderabad': 1.0, 'Hyderabad→Bengaluru': 1.0,
+        'Chennai→Bengaluru': 1.0, 'Bengaluru→Chennai': 1.0,
+        'Delhi→Dubai': 4.0, 'Dubai→Delhi': 4.0,
+        'Mumbai→Singapore': 5.5, 'Singapore→Mumbai': 5.5,
+        'Dehradun→Delhi': 1.0, 'Delhi→Dehradun': 1.0,
+      };
+      const hours = routeHours[routeKey] || 2.0;
+      const rate = baseRates[offer.aircraft_category] || 250000;
+      return Math.round(rate * hours);
+    }
+
+    function savingsPercent(original, current) {
+      return Math.round(((original - current) / original) * 100);
+    }
+
+    function getOperatorInitials(name) {
+      return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    }
+
+    let allOffers = [];
+    let activeFilters = {};
+    let lastUpdated = null;
+
+    function formatRelativeTime(date) {
+      if (!date) return 'just now';
+      const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+      if (seconds < 60) return 'just now';
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return minutes + ' min ago';
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return hours + ' hr ago';
+      return Math.floor(hours / 24) + ' day ago';
+    }
+
+    function updatePageTitle(filters) {
+      const base = 'Empty Leg Flights India | Browse Available Empty Legs';
+      const parts = [];
+      if (filters.departure && filters.destination) {
+        parts.push(`${filters.departure} to ${filters.destination}`);
+      } else if (filters.departure) {
+        parts.push(`from ${filters.departure}`);
+      } else if (filters.destination) {
+        parts.push(`to ${filters.destination}`);
+      }
+      if (parts.length) {
+        document.title = `${parts.join(' ')} Empty Leg Flights | EmptyLeg India`;
+      } else {
+        document.title = base;
+      }
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) {
+        if (parts.length) {
+          metaDesc.setAttribute('content', `Operator-confirmed empty-leg flights from ${parts.join(' ')}. Whole-aircraft charter at up to 75% off.`);
+        } else {
+          metaDesc.setAttribute('content', 'Browse operator-confirmed private jet empty-leg flights across India. Mumbai–Delhi, Bangalore–Goa, Delhi–Dubai and more. Whole-aircraft charter.');
+        }
+      }
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialFrom = urlParams.get('from');
+    const initialTo = urlParams.get('to');
+    if (initialFrom) document.getElementById('searchFrom').value = initialFrom;
+    if (initialTo) document.getElementById('searchTo').value = initialTo;
+
+    async function fetchOffers() {
+      const loading = document.getElementById('loading');
+      const grid = document.getElementById('offersGrid');
+      const error = document.getElementById('error');
+      loading.style.display = 'flex';
+      grid.style.display = 'none';
+      error.classList.add('hidden');
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/offers`, {
+          headers: { 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
+        });
+        if (!res.ok) throw new Error('Failed to load offers');
+        allOffers = await res.json();
+        lastUpdated = new Date();
+        populateFilters();
+        applyFilters();
+      } catch (err) {
+        loading.style.display = 'none';
+        const el = document.getElementById('error');
+        el.textContent = 'Unable to load flights. Please try again later.';
+        el.classList.remove('hidden');
+        console.error(err);
+      }
+    }
+
+    function populateFilters() {
+      const departures = [...new Set(allOffers.map(o => o.departure_city).filter(Boolean))].sort();
+      const destinations = [...new Set(allOffers.map(o => o.destination_city).filter(Boolean))].sort();
+      const depSelect = document.getElementById('departureFilter');
+      const destSelect = document.getElementById('destinationFilter');
+      const drawerDep = document.getElementById('drawerDepartureFilter');
+      const drawerDest = document.getElementById('drawerDestinationFilter');
+      departures.forEach(c => {
+        depSelect.add(new Option(c, c));
+        drawerDep.add(new Option(c, c));
+      });
+      destinations.forEach(c => {
+        destSelect.add(new Option(c, c));
+        drawerDest.add(new Option(c, c));
+      });
+      if (initialFrom) { depSelect.value = initialFrom; drawerDep.value = initialFrom; activeFilters.departure = initialFrom; }
+      if (initialTo) { destSelect.value = initialTo; drawerDest.value = initialTo; activeFilters.destination = initialTo; }
+    }
+
+    function applyQuickSearch() {
+      const from = document.getElementById('searchFrom').value.trim();
+      const to = document.getElementById('searchTo').value.trim();
+      const params = new URLSearchParams();
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+      window.location.href = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    }
+
+    function applyFilters() {
+      const dep = document.getElementById('departureFilter').value;
+      const dest = document.getElementById('destinationFilter').value;
+      const cat = document.getElementById('categoryFilter').value;
+      const pax = parseInt(document.getElementById('passengerFilter').value) || 0;
+      const price = parseInt(document.getElementById('priceFilter').value) || Infinity;
+
+      activeFilters = { departure: dep, destination: dest, category: cat, passengers: pax, price };
+      updatePageTitle(activeFilters);
+
+      let filtered = allOffers.filter(o => {
+        if (dep && o.departure_city !== dep) return false;
+        if (dest && o.destination_city !== dest) return false;
+        if (cat && o.aircraft_category !== cat) return false;
+        if (pax && o.passenger_capacity < pax) return false;
+        if (o.price_amount > price) return false;
+        return true;
+      });
+
+      filtered.sort((a, b) => new Date(a.departure_datetime) - new Date(b.departure_datetime));
+      renderResults(filtered);
+    }
+
+    function applyFiltersFromDrawer() {
+      activeFilters.departure = document.getElementById('drawerDepartureFilter').value;
+      activeFilters.destination = document.getElementById('drawerDestinationFilter').value;
+      activeFilters.category = document.getElementById('drawerCategoryFilter').value;
+      activeFilters.passengers = parseInt(document.getElementById('drawerPassengerFilter').value) || 0;
+      activeFilters.price = parseInt(document.getElementById('drawerPriceFilter').value) || Infinity;
+      updatePageTitle(activeFilters);
+
+      // Sync desktop filters
+      document.getElementById('departureFilter').value = activeFilters.departure;
+      document.getElementById('destinationFilter').value = activeFilters.destination;
+      document.getElementById('categoryFilter').value = activeFilters.category;
+      document.getElementById('passengerFilter').value = activeFilters.passengers;
+      document.getElementById('priceFilter').value = activeFilters.price;
+
+      let filtered = allOffers.filter(o => {
+        if (activeFilters.departure && o.departure_city !== activeFilters.departure) return false;
+        if (activeFilters.destination && o.destination_city !== activeFilters.destination) return false;
+        if (activeFilters.category && o.aircraft_category !== activeFilters.category) return false;
+        if (activeFilters.passengers && o.passenger_capacity < activeFilters.passengers) return false;
+        if (o.price_amount > activeFilters.price) return false;
+        return true;
+      });
+      filtered.sort((a, b) => new Date(a.departure_datetime) - new Date(b.departure_datetime));
+      renderResults(filtered);
+    }
+
+    function renderResults(offers) {
+      const grid = document.getElementById('offersGrid');
+      const loading = document.getElementById('loading');
+      const empty = document.getElementById('empty');
+      const countEl = document.getElementById('resultsCount');
+      const subtitle = document.getElementById('resultsSubtitle');
+      const lastUpdatedEl = document.getElementById('lastUpdated');
+      const lastUpdatedAgo = document.getElementById('lastUpdatedAgo');
+
+      loading.style.display = 'none';
+      countEl.textContent = offers.length + ' available ' + (offers.length === 1 ? 'empty leg' : 'empty legs');
+      subtitle.textContent = buildSubtitle();
+
+      if (lastUpdated) {
+        lastUpdatedEl.classList.remove('hidden');
+        lastUpdatedAgo.textContent = formatRelativeTime(lastUpdated);
+      }
+
+      if (offers.length === 0) {
+        grid.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+      grid.style.display = 'grid';
+      grid.innerHTML = offers.map(offer => renderCard(offer)).join('');
+      injectJsonLd(offers);
+    }
+
+    function injectJsonLd(offers) {
+      const existing = document.getElementById('json-ld-offers');
+      if (existing) existing.remove();
+      const script = document.createElement('script');
+      script.id = 'json-ld-offers';
+      script.type = 'application/ld+json';
+      script.textContent = JSON.stringify({
+        '@context': 'https://schema.org/',
+        '@type': 'ItemList',
+        'itemListElement': offers.map((o, i) => ({
+          '@type': 'Offer',
+          'position': i + 1,
+          'itemOffered': {
+            '@type': 'Flight',
+            'name': o.departure_city + ' \u2192 ' + o.destination_city + ' Empty Leg',
+            'flightNumber': o.offer_reference,
+            'departureAirport': { '@type': 'Airport', 'iataCode': o.departure_airport || o.departure_city, 'name': o.departure_city },
+            'arrivalAirport': { '@type': 'Airport', 'iataCode': o.destination_airport || o.destination_city, 'name': o.destination_city },
+            'departureTime': o.departure_datetime,
+            'arrivalTime': o.arrival_datetime,
+            'aircraft': { '@type': 'Vehicle', 'name': o.aircraft_type, 'category': o.aircraft_category },
+            'seatingCapacity': o.passenger_capacity,
+          },
+          'price': o.price_amount,
+          'priceCurrency': o.price_currency,
+          'availability': 'https://schema.org/InStock',
+          'validFrom': o.departure_datetime,
+          'validThrough': o.offer_expires_at,
+          'seller': { '@type': 'Organization', 'name': o.operator_name },
+        })),
+      });
+      document.head.appendChild(script);
+    }
+
+    function buildSubtitle() {
+      const parts = [];
+      if (activeFilters.departure) parts.push('from ' + activeFilters.departure);
+      if (activeFilters.destination) parts.push('to ' + activeFilters.destination);
+      if (activeFilters.category) parts.push(activeFilters.category + ' aircraft');
+      if (activeFilters.passengers) parts.push(activeFilters.passengers + '+ passengers');
+      if (activeFilters.price !== Infinity) parts.push('under ' + formatCurrency(activeFilters.price));
+      return parts.length ? 'Showing ' + parts.join(', ') : 'Showing all available flights';
+    }
+
+    function renderCard(offer) {
+      const originalPrice = estimateOriginalPrice(offer);
+      const savings = savingsPercent(originalPrice, offer.price_amount);
+      const priceIn = formatCurrency(offer.price_amount);
+      const originalIn = formatCurrency(originalPrice);
+      const initials = getOperatorInitials(offer.operator_name || 'Operator');
+      return `
+        <article class="card-hover bg-white rounded-2xl border border-slate-100 overflow-hidden flex flex-col">
+          <div class="h-48 bg-slate-100 flex items-center justify-center text-slate-400 text-3xl relative">
+            ✈
+            <span class="absolute top-3 left-3 badge badge-verified">Verified operator</span>
+            <span class="absolute top-3 right-3 badge badge-gold">Whole aircraft</span>
+          </div>
+          <div class="p-6 flex-1 flex flex-col">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="operator-avatar">${initials}</div>
+              <div class="flex-1">
+                <span class="text-[10px] font-bold tracking-wider text-brand uppercase">${offer.aircraft_category}</span>
+                <div class="text-xs font-medium text-ink mt-0.5">${offer.operator_name}</div>
+              </div>
+              <span class="ml-auto text-xs font-bold text-gold">${priceIn}</span>
+            </div>
+            <div class="price-compare mb-1">
+              <span class="original-price">${originalIn}</span>
+              <span class="savings-badge">Save ${savings}%</span>
+            </div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="font-bold text-lg display">${offer.departure_city}</span>
+              <span class="text-slate-400">→</span>
+              <span class="font-bold text-lg display">${offer.destination_city}</span>
+            </div>
+            <p class="text-xs text-muted mb-4">${formatDateTime(offer.departure_datetime)} • ${formatDateTime(offer.arrival_datetime)}</p>
+            <div class="grid grid-cols-2 gap-4 mb-5">
+              <div class="p-3 rounded-xl bg-slate-50">
+                <div class="text-[10px] font-bold text-muted uppercase">Aircraft</div>
+                <div class="font-medium text-sm">${offer.aircraft_type}</div>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-50">
+                <div class="text-[10px] font-bold text-muted uppercase">Capacity</div>
+                <div class="font-medium text-sm">${offer.passenger_capacity} seats</div>
+              </div>
+            </div>
+            <div class="mt-auto pt-4 border-t border-slate-50">
+              <button class="btn btn-primary w-full" onclick="openEnquiryModal(${offer.id}, ${offer.passenger_capacity}, '${offer.aircraft_type.replace(/'/g, "\\'")}')">Enquire Now</button>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    const wireChangeInput = (id, handler) => { const el = document.getElementById(id); if (el) { el.addEventListener('change', handler); el.addEventListener('input', handler); } };
+    ['departureFilter','destinationFilter','categoryFilter','passengerFilter','priceFilter'].forEach(id => wireChangeInput(id, applyFilters));
+    const wireClick = (id, handler) => { const el = document.getElementById(id); if (el) el.addEventListener('click', handler); };
+    wireClick('resetFilters', () => {
+      document.getElementById('departureFilter').value = '';
+      document.getElementById('destinationFilter').value = '';
+      document.getElementById('categoryFilter').value = '';
+      document.getElementById('passengerFilter').value = '';
+      document.getElementById('priceFilter').value = '';
+      document.getElementById('drawerDepartureFilter').value = '';
+      document.getElementById('drawerDestinationFilter').value = '';
+      document.getElementById('drawerCategoryFilter').value = '';
+      document.getElementById('drawerPassengerFilter').value = '';
+      document.getElementById('drawerPriceFilter').value = '';
+      activeFilters = {};
+      updatePageTitle({});
+      applyFilters();
+    });
+
+    const modalBackdrop = document.getElementById('enquiryModalBackdrop');
+    const modalForm = document.getElementById('enquiryForm');
+    const modalOfferId = document.getElementById('modalOfferId');
+    const modalCancel = document.getElementById('modalCancel');
+
+    function openEnquiryModal(offerId, capacity, aircraft) {
+      if (!modalOfferId || !modalForm || !modalBackdrop) return;
+      modalOfferId.value = offerId;
+      modalForm.reset();
+      document.querySelector('[name="passenger_count"]').max = Math.min(capacity, 19);
+      const aircraftEl = document.getElementById('modalAircraft');
+      if (aircraftEl) aircraftEl.textContent = aircraft;
+      modalBackdrop.classList.add('open');
+    }
+    function closeModal() { if (modalBackdrop) modalBackdrop.classList.remove('open'); }
+    if (modalCancel) modalCancel.addEventListener('click', closeModal);
+    if (modalBackdrop) modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) closeModal(); });
+
+    if (modalForm) modalForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(modalForm);
+      const body = Object.fromEntries(formData);
+      body.offer_id = parseInt(body.offer_id);
+      body.passenger_count = parseInt(body.passenger_count);
+      if (body.budget_max_amount && body.budget_max_amount.trim()) {
+        body.budget_max_amount = parseFloat(body.budget_max_amount);
+      } else { delete body.budget_max_amount; }
+
+      const btn = modalForm.querySelector('button[type="submit"]');
+      btn.disabled = true; btn.classList.add('btn-loading'); btn.textContent = 'Submitting…';
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/enquiries`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+          body: JSON.stringify(body)
+        });
+        const result = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(result.error || `Server error: ${res.status}`);
+        closeModal();
+        showToast(`Enquiry submitted successfully! Reference: ${result.enquiry_id}. The operator will respond with a quote.`);
+      } catch (err) {
+        showToast(err.message || 'Failed to submit enquiry. Please try again.', 'error');
+      } finally {
+        btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Submit Enquiry';
+      }
+    });
+
+    const stickyBar = document.getElementById('mobileStickyBar');
+    const stickyEnquireBtn = document.getElementById('stickyEnquireBtn');
+    const stickyDismiss = document.getElementById('stickyDismiss');
+    let stickyDismissed = false;
+
+    if (stickyBar && stickyEnquireBtn) {
+      window.addEventListener('scroll', () => {
+        if (stickyDismissed) return;
+        stickyBar.style.display = window.scrollY > 300 ? 'flex' : 'none';
+      });
+      const originalOpen = openEnquiryModal;
+      openEnquiryModal = function(offerId, capacity, aircraft) {
+        originalOpen(offerId, capacity, aircraft);
+        if (stickyBar) stickyBar.style.display = 'none';
+      };
+      stickyEnquireBtn.addEventListener('click', () => {
+        const firstCard = document.querySelector('#offersGrid article');
+        if (firstCard) {
+          const btn = firstCard.querySelector('button');
+          if (btn && btn.onclick) btn.onclick();
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+      if (stickyDismiss) {
+        stickyDismiss.addEventListener('click', () => {
+          stickyDismissed = true;
+          stickyBar.style.display = 'none';
+        });
+      }
+    }
+
+    function toggleFilterDrawer() {
+      const drawer = document.getElementById('filterDrawer');
+      const overlay = document.getElementById('filterDrawerOverlay');
+      const isOpen = drawer.classList.contains('open');
+      if (isOpen) {
+        drawer.classList.remove('open');
+        overlay.classList.remove('open');
+      } else {
+        drawer.classList.add('open');
+        overlay.classList.add('open');
+      }
+    }
+
+    fetchOffers();
+  </script>
+
+</body>
+</html>
