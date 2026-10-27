@@ -1,24 +1,27 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "http://localhost:3000"
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "http://localhost:5173"
+const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY") ?? ""
 
-if (!SUPABASE_SERVICE_ROLE_KEY) {
-  console.error("SUPABASE_SERVICE_ROLE_KEY not set - Edge Function cannot call Supabase with elevated privileges")
+if (!SERVICE_ROLE_KEY) {
+  console.error("SERVICE_ROLE_KEY not set - Edge Function cannot call Supabase with elevated privileges")
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+function corsHeadersFor(req: Request) {
+  const origin = req.headers.get("origin") || "*"
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+  }
 }
 
 function getAuthHeaders() {
   const headers = new Headers()
-  if (SUPABASE_SERVICE_ROLE_KEY) {
-    headers.set('apikey', SUPABASE_SERVICE_ROLE_KEY)
-    headers.set('Authorization', `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`)
+  if (SERVICE_ROLE_KEY) {
+    headers.set('apikey', SERVICE_ROLE_KEY)
+    headers.set('Authorization', `Bearer ${SERVICE_ROLE_KEY}`)
   }
   headers.set('Content-Type', 'application/json')
   return headers
@@ -41,7 +44,7 @@ function sanitizeError(error: unknown): string {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeadersFor(req) })
   }
 
   try {
@@ -71,21 +74,21 @@ serve(async (req) => {
       if (!offer_id || !customer_name || !customer_email || !customer_phone || !passenger_count) {
         return new Response(JSON.stringify({ error: 'Missing required fields' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' }
         })
       }
 
       if (typeof offer_id !== 'number' || offer_id <= 0) {
         return new Response(JSON.stringify({ error: 'Invalid offer_id' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' }
         })
       }
 
       if (typeof passenger_count !== 'number' || passenger_count < 1 || passenger_count > 19) {
         return new Response(JSON.stringify({ error: 'Passenger count must be between 1 and 19' }), {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' }
         })
       }
 
@@ -112,7 +115,7 @@ serve(async (req) => {
         const message = err?.message || `Server error: ${rpcRes.status}`
         return new Response(JSON.stringify({ error: sanitizeError(new Error(message)) }), {
           status: rpcRes.status >= 400 && rpcRes.status < 500 ? rpcRes.status : 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' }
         })
       }
 
@@ -125,7 +128,7 @@ serve(async (req) => {
         enquiry_id: enquiryId
       }), {
         status: 201,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' }
       })
     }
 
@@ -142,11 +145,11 @@ serve(async (req) => {
         if (!data || data.length === 0) {
           return new Response(JSON.stringify({ error: 'Enquiry not found' }), {
             status: 404,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' }
           })
         }
         return new Response(JSON.stringify(data[0]), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' }
         })
       }
 
@@ -159,19 +162,19 @@ serve(async (req) => {
       }
       const data = await res.json()
       return new Response(JSON.stringify(data), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' }
       })
     }
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' }
     })
   } catch (error) {
     console.error("Error:", error)
     return new Response(JSON.stringify({ error: sanitizeError(error) }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' }
     })
   }
 }, { port: 8001 })

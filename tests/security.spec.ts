@@ -13,7 +13,7 @@ if (!ANON_KEY) {
 }
 
 test.describe('Security Tests - Enquiry Ownership', () => {
-  let testOfferId;
+  let testOfferId: number;
 
   test.beforeAll(async ({ request }) => {
     const response = await request.get(`${SUPABASE_URL}/available_offers_view?select=*`, {

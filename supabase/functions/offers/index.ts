@@ -1,26 +1,30 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "http://localhost:3000"
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "http://localhost:5173"
+const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY") ?? ""
+const ANON_KEY = Deno.env.get("ANON_KEY") ?? ""
 
-if (!SUPABASE_SERVICE_ROLE_KEY) {
-  console.error("SUPABASE_SERVICE_ROLE_KEY not set - Edge Function cannot call Supabase with elevated privileges")
+if (!SERVICE_ROLE_KEY) {
+  console.error("SERVICE_ROLE_KEY not set - Edge Function cannot call Supabase with elevated privileges")
 }
-if (!SUPABASE_ANON_KEY) {
-  console.warn("SUPABASE_ANON_KEY not set - public reads will fail")
+if (!ANON_KEY) {
+  console.warn("ANON_KEY not set - public reads will fail")
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+function corsHeadersFor(req: Request) {
+  // Reflect the request origin so any frontend domain can call this public API.
+  const origin = req.headers.get("origin") || "*"
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+  }
 }
 
 function getPublicHeaders(req: Request) {
   // Use anon key from request header (forwarded from frontend) or fall back to env
-  const anonKey = req.headers.get('apikey') || SUPABASE_ANON_KEY
+  const anonKey = req.headers.get('apikey') || ANON_KEY
   const headers = new Headers()
   if (anonKey) {
     headers.set('apikey', anonKey)
@@ -45,7 +49,7 @@ function sanitizeError(error: unknown): string {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeadersFor(req) })
   }
 
   try {
@@ -68,11 +72,11 @@ serve(async (req) => {
       if (!data || data.length === 0) {
         return new Response(JSON.stringify({ error: 'Offer not found' }), {
           status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' }
         })
       }
       return new Response(JSON.stringify(data[0]), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' }
       })
     }
 
@@ -86,13 +90,13 @@ serve(async (req) => {
     const data = await res.json()
 
     return new Response(JSON.stringify(data), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' }
     })
   } catch (error) {
     console.error("Error:", error)
     return new Response(JSON.stringify({ error: sanitizeError(error) }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeadersFor(req), 'Content-Type': 'application/json' }
     })
   }
 }, { port: 8000 })

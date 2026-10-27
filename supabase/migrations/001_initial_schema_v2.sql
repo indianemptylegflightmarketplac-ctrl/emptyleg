@@ -364,7 +364,7 @@ begin
 
   -- Validate passenger capacity
   if p_passenger_count > v_offer.passenger_capacity then
-    raise exception 'Maximum passenger capacity is ' || v_offer.passenger_capacity using errcode = 'P0004';
+    raise exception 'Maximum passenger capacity is %', v_offer.passenger_capacity using errcode = 'P0004';
   end if;
 
   -- Insert enquiry
@@ -620,7 +620,7 @@ create policy "staff_read_notifications" on public.notification_log
 -- ---------------------------------------------------------------------
 
 -- Available offers with operator info (for public browsing)
-create or replace view public.available_offers_view as
+create or replace view public.available_offers_view with (security_invoker = true) as
 select
   o.id,
   o.offer_reference,
@@ -658,7 +658,7 @@ comment on view public.available_offers_view is
   'Public-facing view of verified, available offers from authorized operators.';
 
 -- Enquiry summary for staff dashboard
-create or replace view public.enquiry_summary_view as
+create or replace view public.enquiry_summary_view with (security_invoker = true) as
 select
   e.id,
   e.status,
