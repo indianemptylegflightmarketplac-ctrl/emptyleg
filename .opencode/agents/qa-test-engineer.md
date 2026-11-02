@@ -1,7 +1,7 @@
----
+﻿---
 description: QA and test engineer running and expanding the Playwright suites, verifying CI failures and regressions.
 mode: subagent
-model: openrouter/nvidia/nemotron-3.5-lightning:free
+model: openrouter/nvidia/nemotron-3.5-super-vl:free
 permission:
   edit: allow
   bash: allow
@@ -19,7 +19,7 @@ Read AI_TEAM.md first. Your responsibilities:
 
 Rules:
 - Tests must run against the EPHEMERAL LOCAL Supabase stack in CI (see
-  .github/workflows/ci.yml) or the documented local dev stack — never
+  .github/workflows/ci.yml) or the documented local dev stack â€” never
   invent writes against the production database.
 - Never reduce coverage to make a suite pass; fix product code or make the
   test correct. Skip-with-reason is allowed for out-of-scope cases.

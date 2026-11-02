@@ -1,7 +1,7 @@
----
+﻿---
 description: Independent code reviewer for PRs. Has no write access to prevent reviewing and approving its own changes.
 mode: subagent
-model: openrouter/inclusionai/ling-3.0-flash:free
+model: openrouter/google/gemma-4-26b-a4b-it:free
 permission:
   edit: deny
   bash: deny

@@ -1,7 +1,7 @@
----
+﻿---
 description: Read-only security and quality reviewer for the marketplace.
 mode: subagent
-model: openrouter/inclusionai/ling-3.0-flash:free
+model: openrouter/google/gemma-4-26b-a4b-it:free
 permission:
   edit: deny
   bash: deny

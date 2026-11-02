@@ -59,7 +59,7 @@ jobs:
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         with:
-          model: openrouter/nvidia/nemotron-3.5-lightning:free
+          model: openrouter/nvidia/nemotron-3.5-super-vl:free
           use_github_token: 'true'
           prompt: |
             You are an agent of the EmptyLeg India AI development team.

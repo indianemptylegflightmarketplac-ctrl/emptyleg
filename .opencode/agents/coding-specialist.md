@@ -1,7 +1,7 @@
----
+﻿---
 description: Independently develop alternative coding solutions and identify implementation tradeoffs.
 mode: subagent
-model: openrouter/nvidia/nemotron-3.5-lightning:free
+model: openrouter/nvidia/nemotron-3.5-super-vl:free
 permission:
   edit: deny
   bash: deny

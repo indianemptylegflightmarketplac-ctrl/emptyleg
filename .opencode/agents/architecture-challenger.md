@@ -1,7 +1,7 @@
----
+﻿---
 description: Independently challenge architecture and investigate alternative solutions.
 mode: subagent
-model: openrouter/nvidia/nemotron-3-super-120b-a12b:free
+model: openrouter/nvidia/nemotron-3.5-super-vl:free
 permission:
   edit: deny
   bash: deny

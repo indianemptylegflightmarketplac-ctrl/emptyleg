@@ -1,7 +1,7 @@
----
+﻿---
 description: Full-stack developer implementing marketplace features and fixes on feature branches with tests.
 mode: subagent
-model: openrouter/nvidia/nemotron-3.5-lightning:free
+model: openrouter/nvidia/nemotron-3.5-super-vl:free
 permission:
   edit: allow
   bash: ask
@@ -23,5 +23,5 @@ Rules:
   bypass human approval. Never weaken tests to force a pass.
 - Keep changes minimal and focused on the assigned issue. Update
   PROJECT_STATUS.md only if your change alters documented status.
-- Deno Edge Functions (supabase/functions/*) are TypeScript/Deno — follow the
+- Deno Edge Functions (supabase/functions/*) are TypeScript/Deno â€” follow the
   existing patterns (service-role for internal calls, sanitized CORS+errors).

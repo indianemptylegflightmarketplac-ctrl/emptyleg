@@ -1,7 +1,7 @@
----
+﻿---
 description: Database and security engineer auditing Supabase RLS, migrations, API and auth security. Never executes destructive production SQL.
 mode: subagent
-model: openrouter/inclusionai/ling-3.0-flash:free
+model: openrouter/google/gemma-4-26b-a4b-it:free
 permission:
   edit: deny
   bash: deny
