@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 const IS_WSL = process.platform === 'linux' && process.env.WSL_DISTRO_NAME;
-const FRONTEND_URL = 'http://127.0.0.1:5173';
-const SUPABASE_URL = 'http://127.0.0.1:3000';
+const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://127.0.0.1:5173';
+// Environment-driven target: defaults to the WSL Docker bridge for dev runs;
+// CI injects its own URL.
+const SUPABASE_URL = process.env.SUPABASE_URL ?? (IS_WSL ? 'http://localhost:3000' : 'http://172.23.176.1:3000');
 const ANON_KEY = process.env.ANON_KEY;
 const ANON_JWT = process.env.ANON_JWT || '';
 

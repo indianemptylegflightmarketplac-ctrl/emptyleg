@@ -2,14 +2,15 @@ name: CI/CD
 
 on:
   push:
-    branches: [master, main]
+    branches: [master, main, fix/ci-production-readiness]
   pull_request:
     branches: [master, main]
 
 env:
-  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+  # Cloudflare deploys are gated: deploy jobs are skipped unless the
+  # credentials are configured. Production additionally requires a manual
+  # approval on the `production` environment (see deploy-production below).
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
 jobs:
   lint-and-typecheck:
@@ -24,14 +25,28 @@ jobs:
       - run: npx tsc --noEmit
 
   migration-check:
+    # Applies the tracked Supabase migrations + seed to an EPHEMERAL LOCAL
+    # stack — validates migration ordering/schema without touching any
+    # cloud/production database and without requiring Supabase credentials.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
-      - run: supabase migration list
-      - run: supabase db push --dry-run
+        with:
+          version: latest
+      - name: Assert migrations exist
+        run: test -f supabase/migrations/001_initial_schema_v2.sql && test -f supabase/seed.sql
+      - name: Start local Supabase stack (applies migrations + seed)
+        run: supabase start --debug
+      - name: Verify schema applied
+        run: |
+          supabase status
+          supabase status -o env | grep -q '^ANON_KEY='
 
-  api-tests:
+  local-stack-tests:
+    # Runs the Playwright suite (API, frontend, security) against the same
+    # ephemeral local Supabase stack. Read-mostly; enquiries created during
+    # the run live only in this disposable container.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,50 +54,54 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npx playwright test tests/api.spec.ts --reporter=line
-        env:
-          ANON_KEY: ${{ secrets.ANON_KEY }}
-          ANON_JWT: ${{ secrets.ANON_JWT }}
-
-  frontend-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: supabase/setup-cli@v1
         with:
-          node-version: '20'
-          cache: 'npm'
+          version: latest
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      # Start frontend preview server
-      - run: npx serve public -l 5173 &
-      - run: sleep 5
-      - run: npx playwright test tests/frontend.spec.ts --reporter=line
-        env:
-          ANON_KEY: ${{ secrets.ANON_KEY }}
-          ANON_JWT: ${{ secrets.ANON_JWT }}
-
-  security-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npx playwright test tests/security.spec.ts --reporter=line
-        env:
-          ANON_KEY: ${{ secrets.ANON_KEY }}
-          ANON_JWT: ${{ secrets.ANON_JWT }}
+      - name: Start local Supabase stack (applies migrations + seed)
+        run: supabase start
+      - name: Export local stack configuration for tests
+        run: |
+          # Emit KEY=VALUE pairs from `supabase status`; keep them in GITHUB_ENV
+          supabase status -o env > /tmp/sb_env
+          SUPABASE_URL=$(grep '^API_URL=' /tmp/sb_env | cut -d= -f2 | tr -d '"')
+          ANON_KEY=$(grep '^ANON_KEY=' /tmp/sb_env | cut -d= -f2 | tr -d '"')
+          {
+            echo "SUPABASE_URL=$SUPABASE_URL"
+            echo "ANON_KEY=$ANON_KEY"
+            echo "KONG_URL=$SUPABASE_URL"
+          } >> "$GITHUB_ENV"
+      - name: Write frontend runtime config (config.local.js)
+        run: |
+          # index.html loads config.local.js before config.js; this binds the
+          # frontend to the disposable local stack only.
+          cat > public/config.local.js <<EOF
+          window.__ENV_LOCAL__ = {
+            SUPABASE_URL: '${SUPABASE_URL}',
+            SUPABASE_ANON_KEY: '${ANON_KEY}',
+            ALLOW_DEV_DEFAULTS: 'true'
+          };
+          EOF
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Serve frontend
+        run: |
+          npx serve public -l 5173 &
+          sleep 5
+      - name: API tests
+        run: npx playwright test tests/api.spec.ts --reporter=line
+      - name: Frontend tests
+        run: npx playwright test tests/frontend.spec.ts --reporter=line
+      - name: Security tests
+        run: npx playwright test tests/security.spec.ts --reporter=line
+      - name: Stop local stack
+        if: always()
+        run: supabase stop --no-backup || true
 
   deploy-preview:
     needs: [lint-and-typecheck, migration-check]
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && env.CLOUDFLARE_API_TOKEN != ''
     steps:
       - uses: actions/checkout@v4
       - uses: cloudflare/pages-action@v1
@@ -94,9 +113,16 @@ jobs:
           branch: preview-${{ github.event.number }}
 
   deploy-production:
-    needs: [lint-and-typecheck, migration-check, api-tests, frontend-tests, security-tests]
+    needs: [lint-and-typecheck, migration-check, local-stack-tests]
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && github.event_name == 'push'
+    # Human approval gate: requires a configured `production` environment with
+    # a reviewer requirement. While that environment does not exist this job
+    # fails fast instead of silently deploying.
+    if: >-
+      env.CLOUDFLARE_API_TOKEN != '' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push'
+    environment: production
     steps:
       - uses: actions/checkout@v4
       - uses: cloudflare/pages-action@v1

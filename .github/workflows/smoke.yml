@@ -2,16 +2,20 @@ name: Critical Smoke Tests
 on:
   push:
     branches: [master, main]
+  schedule:
+    - cron: "0 */6 * * *"
 jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Test Marketplace
-        run: curl -s -o /dev/null -w "%{http_code}" https://master.emptyleg-india.pages.dev/marketplace/ | grep -q "200"
+        run: curl -sS -o /dev/null -w "%{http_code}\n" https://master.emptyleg-india.pages.dev/marketplace/ | grep -q "^200$"
+      # Cloudflare Pages prettifies /agent-dashboard.html -> /agent-dashboard
+      # (HTTP 308). Test the canonical extensionless URL.
       - name: Test Agent Dashboard
-        run: curl -s -o /dev/null -w "%{http_code}" https://master.emptyleg-india.pages.dev/agent-dashboard.html | grep -q "200"
+        run: curl -sS -o /dev/null -w "%{http_code}\n" https://master.emptyleg-india.pages.dev/agent-dashboard | grep -q "^200$"
       - name: Test Admin
-        run: curl -s -o /dev/null -w "%{http_code}" https://master.emptyleg-india.pages.dev/admin | grep -q "200"
+        run: curl -sS -o /dev/null -w "%{http_code}\n" https://master.emptyleg-india.pages.dev/admin | grep -q "^200$"
       - name: Test Agent 1 (safe read-only health check)
-        run: curl -s -o /dev/null -w "%{http_code}" https://mfijofonuggcxqlftgtl.supabase.co/functions/v1/agent-1-lead-generation | grep -qE "200|404|401"
+        run: curl -sS -o /dev/null -w "%{http_code}\n" https://mfijofonuggcxqlftgtl.supabase.co/functions/v1/agent-1-lead-generation | grep -qE "^(200|404|401)$"

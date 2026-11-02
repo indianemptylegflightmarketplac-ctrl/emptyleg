@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 const IS_WSL = process.platform === 'linux' && process.env.WSL_DISTRO_NAME;
-const SUPABASE_URL = IS_WSL ? 'http://localhost:3000' : 'http://172.23.176.1:3000';
+// Environment-driven target: defaults to the WSL Docker bridge for dev runs
+// (docker-compose / Kong on port 3000); CI injects its own URL.
+const SUPABASE_URL = process.env.SUPABASE_URL ?? (IS_WSL ? 'http://localhost:3000' : 'http://172.23.176.1:3000');
 const ANON_KEY = process.env.ANON_KEY;
-const KONG_URL = IS_WSL ? 'http://localhost:54321' : 'http://172.23.176.1:54321';
+const KONG_URL = process.env.KONG_URL ?? (IS_WSL ? 'http://localhost:54321' : 'http://172.23.176.1:54321');
 const STUDIO_URL = IS_WSL ? 'http://localhost:54323' : 'http://172.23.176.1:54323';
 
 // ANON_JWT must be provided via ANON_JWT env var (generated at runtime)
