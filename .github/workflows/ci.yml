@@ -75,14 +75,17 @@ jobs:
         run: supabase start
       - name: Export local stack configuration for tests
         run: |
-          # Emit KEY=VALUE pairs from `supabase status`; keep them in GITHUB_ENV
+          # `supabase status -o env` emits API_URL=<gateway root>. Tests speak
+          # PostgREST, so they need the /rest/v1 path; the frontend speaks the
+          # gateway root (/functions/v1/...).
           supabase status -o env > /tmp/sb_env
-          SUPABASE_URL=$(grep '^API_URL=' /tmp/sb_env | cut -d= -f2 | tr -d '"')
+          GATEWAY_ROOT=$(grep '^API_URL=' /tmp/sb_env | cut -d= -f2 | tr -d '"' | sed 's|/*$||')
           ANON_KEY=$(grep '^ANON_KEY=' /tmp/sb_env | cut -d= -f2 | tr -d '"')
           {
-            echo "SUPABASE_URL=$SUPABASE_URL"
+            echo "SUPABASE_URL=${GATEWAY_ROOT}/rest/v1"
+            echo "SUPABASE_GATEWAY_URL=${GATEWAY_ROOT}"
             echo "ANON_KEY=$ANON_KEY"
-            echo "KONG_URL=$SUPABASE_URL"
+            echo "KONG_URL=$GATEWAY_ROOT"
           } >> "$GITHUB_ENV"
       - name: Write frontend runtime config (config.local.js)
         run: |
@@ -90,7 +93,7 @@ jobs:
           # frontend to the disposable local stack only.
           cat > public/config.local.js <<EOF
           window.__ENV_LOCAL__ = {
-            SUPABASE_URL: '${SUPABASE_URL}',
+            SUPABASE_URL: '${SUPABASE_GATEWAY_URL}',
             SUPABASE_ANON_KEY: '${ANON_KEY}',
             ALLOW_DEV_DEFAULTS: 'true'
           };
