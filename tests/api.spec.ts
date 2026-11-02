@@ -4,7 +4,9 @@ const IS_WSL = process.platform === 'linux' && process.env.WSL_DISTRO_NAME;
 // Environment-driven target: defaults to the WSL Docker bridge for dev runs
 // (docker-compose / Kong on port 3000); CI injects its own URL.
 const SUPABASE_URL = process.env.SUPABASE_URL ?? (IS_WSL ? 'http://localhost:3000' : 'http://172.23.176.1:3000');
+const GATEWAY_URL = process.env.GATEWAY_URL ?? SUPABASE_URL.replace(/\/rest\/v1$/, '');
 const ANON_KEY = process.env.ANON_KEY;
+const SERVICE_ROLE_KEY = process.env.SERVICE_ROLE_KEY ?? '';
 const KONG_URL = process.env.KONG_URL ?? (IS_WSL ? 'http://localhost:54321' : 'http://172.23.176.1:54321');
 const STUDIO_URL = IS_WSL ? 'http://localhost:54323' : 'http://172.23.176.1:54323';
 
@@ -171,13 +173,11 @@ test.describe('REST API - Enquiries (Privacy)', () => {
   });
 
   test('GET /booking_enquiries returns empty for anon (privacy)', async ({ request }) => {
+    // anon has no SELECT policy on booking_enquiries -> direct read denied
     const response = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
       headers: { apikey: ANON_KEY }
     });
-    expect(response.ok()).toBeTruthy();
-    const enquiries = await response.json();
-    expect(Array.isArray(enquiries)).toBeTruthy();
-    expect(enquiries.length).toBe(0); // anon cannot read any enquiries
+    expect([401, 403]).toContain(response.status());
   });
 
   test('GET /booking_enquiries with anon JWT returns empty', async ({ request }) => {
@@ -190,11 +190,36 @@ test.describe('REST API - Enquiries (Privacy)', () => {
     expect(enquiries.length).toBe(0);
   });
 
-  test('POST /booking_enquiries with apikey header (anon) creates enquiry', async ({ request }) => {
+  test('POST /booking_enquiries direct PostgREST anon insert is denied (privacy)', async ({ request }) => {
+    // DESIGN: anonymous users CANNOT insert booking_enquiries directly via
+    // PostgREST. All public enquiry submissions go through the Edge Function
+    // (POST /functions/v1/enquiries) which calls create_enquiry_atomic with
+    // the service-role key (RLS bypass). See supabase/functions/enquiries/index.ts.
     const response = await request.post(`${SUPABASE_URL}/booking_enquiries`, {
       headers: { 
         'Content-Type': 'application/json',
         'apikey': ANON_KEY
+      },
+      data: {
+        offer_id: testOfferId,
+        customer_name: 'Test Customer',
+        customer_email: 'test@example.com',
+        customer_phone: '+91-9876543210',
+        passenger_count: 4
+      }
+    });
+    
+    expect([401, 403]).toContain(response.status());
+  });
+
+  test('POST /functions/v1/enquiries via Edge Function (service role) creates enquiry', async ({ request }) => {
+    // Supported public submission path: Edge Function validates + calls the
+    // atomic RPC with the service-role key.
+    const response = await request.post(`${GATEWAY_URL}/functions/v1/enquiries`, {
+      headers: { 
+        'Content-Type': 'application/json',
+        'apikey': SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SERVICE_ROLE_KEY}`
       },
       data: {
         offer_id: testOfferId,

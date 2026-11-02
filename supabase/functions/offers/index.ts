@@ -1,7 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "http://localhost:3000"
-const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY") ?? ""
+// SERVICE_ROLE_KEY: custom secret name used in cloud deployments.
+// SUPABASE_SERVICE_ROLE_KEY is auto-injected by local edge runtime
+// (`supabase start`) and cloud deployments - accept both.
+const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 const ANON_KEY = Deno.env.get("ANON_KEY") ?? ""
 
 if (!SERVICE_ROLE_KEY) {

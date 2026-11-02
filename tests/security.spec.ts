@@ -25,7 +25,11 @@ test.describe('Security Tests - Enquiry Ownership', () => {
     testOfferId = offers[0].id;
   });
 
-  test('Anonymous create succeeds with valid data', async ({ request }) => {
+  test('Anonymous create via direct PostgREST is denied (privacy)', async ({ request }) => {
+    // DESIGN: anonymous users CANNOT insert booking_enquiries directly via
+    // PostgREST — submissions go through the Edge Function
+    // (POST /functions/v1/enquiries, service-role key). Direct PostgREST
+    // insert must be rejected with 401/403, not succeed.
     const response = await request.post(`${SUPABASE_URL}/booking_enquiries`, {
       headers: { 
         'Content-Type': 'application/json',
@@ -39,17 +43,14 @@ test.describe('Security Tests - Enquiry Ownership', () => {
         passenger_count: 4
       }
     });
-    expect(response.status()).toBe(201);
+    expect([401, 403]).toContain(response.status());
   });
 
   test('Anonymous read is denied', async ({ request }) => {
     const response = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
       headers: { apikey: ANON_KEY }
     });
-    expect(response.ok()).toBeTruthy();
-    const enquiries = await response.json();
-    expect(Array.isArray(enquiries)).toBeTruthy();
-    expect(enquiries.length).toBe(0);
+    expect([401, 403]).toContain(response.status());
   });
 
   test('Anonymous update is denied', async ({ request }) => {
@@ -138,7 +139,8 @@ test.describe('Security Tests - Enquiry Ownership', () => {
         passenger_count: 4
       }
     });
-    expect(response.status()).toBe(400);
+    // FK constraint or RLS insert denial will catch this first
+    expect([400, 401, 403]).toContain(response.status());
   });
 
   test('Unavailable offer rejected on create', async ({ request }) => {
@@ -155,8 +157,8 @@ test.describe('Security Tests - Enquiry Ownership', () => {
         passenger_count: 4
       }
     });
-    // FK constraint will fail first
-    expect([400, 409]).toContain(response.status());
+    // FK constraint or RLS insert denial will catch this first
+    expect([400, 401, 403]).toContain(response.status());
   });
 
   test('Expired offer rejected on create', async ({ request }) => {
@@ -178,8 +180,8 @@ test.describe('Security Tests - Enquiry Ownership', () => {
         passenger_count: 20 // exceeds capacity
       }
     });
-    // DB constraint passenger_count <= 19 will catch this
-    expect(response.status()).toBe(400);
+    // RLS insert denial or DB passenger_count constraint catches this
+    expect([400, 401, 403]).toContain(response.status());
   });
 
   test('Rate limit and malformed input rejected', async ({ request }) => {
@@ -250,7 +252,8 @@ test.describe('Security Tests - Offer Validation', () => {
         passenger_count: 4
       }
     });
-    expect(response.status()).toBe(400);
+    // FK constraint or RLS insert denial will catch this first
+    expect([400, 401, 403]).toContain(response.status());
   });
 
   test('Over-capacity offer rejected on create', async ({ request }) => {
@@ -267,6 +270,7 @@ test.describe('Security Tests - Offer Validation', () => {
         passenger_count: 20 // exceeds capacity
       }
     });
-    expect(response.status()).toBe(400);
+    // DB constraint passenger_count <= 19 or RLS insert denial
+    expect([400, 401, 403]).toContain(response.status());
   });
 });

@@ -81,10 +81,12 @@ jobs:
           supabase status -o env > /tmp/sb_env
           GATEWAY_ROOT=$(grep '^API_URL=' /tmp/sb_env | cut -d= -f2 | tr -d '"' | sed 's|/*$||')
           ANON_KEY=$(grep '^ANON_KEY=' /tmp/sb_env | cut -d= -f2 | tr -d '"')
+          SERVICE_ROLE_KEY=$(grep '^SERVICE_ROLE_KEY=' /tmp/sb_env | cut -d= -f2 | tr -d '"')
           {
             echo "SUPABASE_URL=${GATEWAY_ROOT}/rest/v1"
             echo "SUPABASE_GATEWAY_URL=${GATEWAY_ROOT}"
             echo "ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
             echo "KONG_URL=$GATEWAY_ROOT"
           } >> "$GITHUB_ENV"
       - name: Write frontend runtime config (config.local.js)
