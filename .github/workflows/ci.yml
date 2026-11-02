@@ -6,13 +6,26 @@ on:
   pull_request:
     branches: [master, main]
 
-env:
-  # Cloudflare deploys are gated: deploy jobs are skipped unless the
-  # credentials are configured. Production additionally requires a manual
-  # approval on the `production` environment (see deploy-production below).
-  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
 jobs:
+  cloudflare-gate:
+    # Detects whether Cloudflare deploy credentials exist, at step level
+    # (secrets/env are not usable in job-level `if` expressions).
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.gate.outputs.ready }}
+    steps:
+      - id: gate
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -n "$CF_TOKEN" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare credentials present"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare credentials absent - deploy jobs will be skipped"
+          fi
+
   lint-and-typecheck:
     runs-on: ubuntu-latest
     steps:
@@ -99,9 +112,9 @@ jobs:
         run: supabase stop --no-backup || true
 
   deploy-preview:
-    needs: [lint-and-typecheck, migration-check]
+    needs: [cloudflare-gate, lint-and-typecheck, migration-check]
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && env.CLOUDFLARE_API_TOKEN != ''
+    if: needs.cloudflare-gate.outputs.ready == 'true' && github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
       - uses: cloudflare/pages-action@v1
@@ -113,13 +126,13 @@ jobs:
           branch: preview-${{ github.event.number }}
 
   deploy-production:
-    needs: [lint-and-typecheck, migration-check, local-stack-tests]
+    needs: [cloudflare-gate, lint-and-typecheck, migration-check, local-stack-tests]
     runs-on: ubuntu-latest
     # Human approval gate: requires a configured `production` environment with
     # a reviewer requirement. While that environment does not exist this job
     # fails fast instead of silently deploying.
     if: >-
-      env.CLOUDFLARE_API_TOKEN != '' &&
+      needs.cloudflare-gate.outputs.ready == 'true' &&
       github.ref == 'refs/heads/main' &&
       github.event_name == 'push'
     environment: production

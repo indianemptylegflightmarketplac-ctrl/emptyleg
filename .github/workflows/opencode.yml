@@ -25,24 +25,36 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: opencode-${{ github.event.issue.number }}-${{ github.event.comment?.id }}-${{ github.event.number }}
+  group: opencode-${{ github.event.issue.number || github.event.pull_request.number }}
   cancel-in-progress: false
 
 jobs:
   opencode:
     runs-on: ubuntu-latest
     if: >-
-      env.OPENROUTER_API_KEY != '' &&
-      (github.event_name == 'issue_comment' ||
-       github.event_name == 'pull_request_review_comment' ||
-       github.event_name == 'issues')
+      github.event_name == 'issue_comment' ||
+      github.event_name == 'pull_request_review_comment' ||
+      github.event_name == 'issues'
     steps:
+      - name: Gate on OpenRouter key
+        id: gate
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          if [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::OPENROUTER_API_KEY secret is not configured - OpenCode agent skipped. Add it under repo Settings > Secrets and variables > Actions."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Checkout repository
+        if: steps.gate.outputs.configured == 'true'
         uses: actions/checkout@v6
         with:
           persist-credentials: true
 
       - name: Run OpenCode
+        if: steps.gate.outputs.configured == 'true'
         uses: anomalyco/opencode/github@latest
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
