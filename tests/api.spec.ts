@@ -6,7 +6,8 @@ const IS_WSL = process.platform === 'linux' && process.env.WSL_DISTRO_NAME;
 const SUPABASE_URL = process.env.SUPABASE_URL ?? (IS_WSL ? 'http://localhost:3000' : 'http://172.23.176.1:3000');
 const GATEWAY_URL = process.env.GATEWAY_URL ?? SUPABASE_URL.replace(/\/rest\/v1$/, '');
 const ANON_KEY = process.env.ANON_KEY;
-const SERVICE_ROLE_KEY = process.env.SERVICE_ROLE_KEY ?? '';
+// CI exports SUPABASE_SERVICE_ROLE_KEY; local runners often use SERVICE_ROLE_KEY.
+const SERVICE_ROLE_KEY = process.env.SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const KONG_URL = process.env.KONG_URL ?? (IS_WSL ? 'http://localhost:54321' : 'http://172.23.176.1:54321');
 const STUDIO_URL = IS_WSL ? 'http://localhost:54323' : 'http://172.23.176.1:54323';
 
@@ -87,6 +88,27 @@ test.describe('REST API - Enquiries (Privacy)', () => {
     });
     const offers = await response.json();
     testOfferId = offers[0].id;
+  });
+
+  // The atomic enquiry RPC flips the consumed offer to 'pending_enquiry'
+  // (create_enquiry_atomic in migrations/001), which removes it from
+  // available_offers_view/the anon-visible offer set. Restore seed state so
+  // the later Database Integrity count contracts (8 offers) stay meaningful.
+  // Best-effort: service-role PATCH on offers; if the local stack denies it,
+  // later suites still see >=7 available offers and no assertion breaks.
+  test.afterAll(async ({ request }) => {
+    if (!testOfferId || !SERVICE_ROLE_KEY) return;
+    const restore = await request.patch(`${SUPABASE_URL}/empty_leg_offers?id=eq.${testOfferId}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+      },
+      data: { availability_status: 'available' }
+    });
+    if (!restore.ok()) {
+      console.log(`[api.spec] offer state restore skipped: service-role PATCH returned ${restore.status()}`);
+    }
   });
 
   test('POST /booking_enquiries direct anon insert is denied (privacy)', async ({ request }) => {
