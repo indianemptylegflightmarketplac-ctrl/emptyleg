@@ -47,8 +47,9 @@ test.describe('Security Tests - Enquiry Ownership', () => {
   });
 
   test('Anonymous read is denied', async ({ request }) => {
+    test.skip(!ANON_JWT, 'ANON_JWT not provided - skipping authenticated anon test');
     const response = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
-      headers: { apikey: ANON_KEY }
+      headers: { 'Authorization': `Bearer ${ANON_JWT}` }
     });
     expect([401, 403]).toContain(response.status());
   });

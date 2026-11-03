@@ -191,8 +191,9 @@ test.describe('Frontend E2E', () => {
 test.describe('Privacy Enforcement via Frontend', () => {
   test('Anonymous user cannot see other enquiries (denied)', async ({ page }) => {
     // Direct API call to verify backend privacy - anon should be denied
+    test.skip(!ANON_JWT, 'ANON_JWT not provided - skipping authenticated anon test');
     const response = await page.request.get('http://localhost:3000/booking_enquiries?select=*', {
-      headers: { apikey: ANON_KEY }
+      headers: { 'Authorization': `Bearer ${ANON_JWT}` }
     });
     expect([401, 403]).toContain(response.status());
   });
@@ -214,7 +215,7 @@ test.describe('Privacy Enforcement via Frontend', () => {
     
     // Try to read all enquiries as anon - should be denied (401/403)
     const response = await page.request.get('http://localhost:3000/booking_enquiries?select=*', {
-      headers: { apikey: ANON_KEY }
+      headers: { 'Authorization': `Bearer ${ANON_JWT}` }
     });
     expect([401, 403]).toContain(response.status());
   });

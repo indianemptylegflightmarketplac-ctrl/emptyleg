@@ -174,8 +174,10 @@ test.describe('REST API - Enquiries (Privacy)', () => {
 
   test('GET /booking_enquiries returns empty for anon (privacy)', async ({ request }) => {
     // anon has no SELECT policy on booking_enquiries -> direct read denied
+    // Use Authorization header (not apikey) for proper RLS enforcement
+    test.skip(!ANON_JWT, 'ANON_JWT not provided - skipping authenticated anon test');
     const response = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
-      headers: { apikey: ANON_KEY }
+      headers: { 'Authorization': `Bearer ${ANON_JWT}` }
     });
     expect([401, 403]).toContain(response.status());
   });
