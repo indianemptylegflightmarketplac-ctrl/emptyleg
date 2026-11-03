@@ -44,13 +44,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Pinned: 'latest' made setup-cli resolve the release via an
+      # unauthenticated GitHub API call, which FAILED run 41584833702
+      # ("rate limit exceeded") on 2026-11-03. v2.122.0 is the last v2
+      # release and ran green across 41578651940..41583863591; v3.0.0
+      # (released 2026-11-02) is a breaking major bump and must be adopted
+      # deliberately, not by surprise through 'latest'.
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: v2.122.0
       - name: Assert migrations exist
         run: test -f supabase/migrations/001_initial_schema_v2.sql && test -f supabase/seed.sql
       - name: Start local Supabase stack (applies migrations + seed)
-        run: supabase start --debug
+        run: |
+          ok=0
+          for i in 1 2 3; do
+            if supabase start; then ok=1; break; fi
+            echo "::warning::supabase start attempt $i failed; cleaning up before retry"
+            supabase stop --no-backup >/dev/null 2>&1 || true
+            docker ps -aq --filter "name=supabase" | xargs -r docker rm -f >/dev/null 2>&1 || true
+            sleep 15
+          done
+          [ "$ok" = "1" ] || { echo "supabase start failed after 3 attempts"; exit 1; }
       - name: Verify schema applied
         run: |
           supabase status
@@ -67,12 +82,26 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+      # Same rationale as the migration-check job: pinned CLI removes the
+      # rate-limit-prone 'latest' resolution step and the v3.0.0 surprise
+      # bump; the retry loop survives runners where a partial container
+      # start leaves a stale host port bound (seen in run 41584833702:
+      # port 54324 "address already in use").
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: v2.122.0
       - run: npm ci
       - name: Start local Supabase stack (applies migrations + seed)
-        run: supabase start
+        run: |
+          ok=0
+          for i in 1 2 3; do
+            if supabase start; then ok=1; break; fi
+            echo "::warning::supabase start attempt $i failed; cleaning up before retry"
+            supabase stop --no-backup >/dev/null 2>&1 || true
+            docker ps -aq --filter "name=supabase" | xargs -r docker rm -f >/dev/null 2>&1 || true
+            sleep 15
+          done
+          [ "$ok" = "1" ] || { echo "supabase start failed after 3 attempts"; exit 1; }
       - name: Export local stack configuration for tests
         run: |
           # `supabase status -o env` emits API_URL=<gateway root>. Tests speak
