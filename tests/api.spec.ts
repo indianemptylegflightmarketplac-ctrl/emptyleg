@@ -144,10 +144,14 @@ test.describe('REST API - Enquiries (Privacy)', () => {
 
   test('POST /functions/v1/enquiries (Edge Function) rejects missing required fields', async ({ request }) => {
     // Public path enforces required-field validation server-side.
+    // Edge functions run behind the gateway with verify_jwt, so requests
+    // must carry the anon JWT (the SPA always sends
+    // 'Authorization: Bearer <anon key>'); this mirrors real traffic.
     const gateway = GATEWAY_URL || SUPABASE_URL.replace(/\/rest\/v1$/, '');
     const response = await request.post(`${gateway}/functions/v1/enquiries`, {
       headers: { 
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ANON_JWT}`,
       },
       data: {
         offer_id: testOfferId,
@@ -167,6 +171,7 @@ test.describe('REST API - Enquiries (Privacy)', () => {
     const response = await request.post(`${gateway}/functions/v1/enquiries`, {
       headers: { 
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ANON_JWT}`,
       },
       data: {
         offer_id: testOfferId,
@@ -183,22 +188,35 @@ test.describe('REST API - Enquiries (Privacy)', () => {
   });
 
   test('GET /booking_enquiries returns empty for anon (privacy)', async ({ request }) => {
-    // anon has no SELECT policy on booking_enquiries -> direct read denied
-    // Use Authorization header (not apikey) for proper RLS enforcement
+    // anon has an explicit deny SELECT policy (migrations/001_initial_schema_v2.sql).
+    // Empirical behavior in the local stack (CI run 41581931856): with an
+    // anon JWT, PostgREST applies the deny policy and returns 200 with an
+    // EMPTY array (identity requests may also be rejected outright).
+    // Either way ZERO rows may ever be returned.
     test.skip(!ANON_JWT, 'ANON_JWT not provided - skipping authenticated anon test');
     const response = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
       headers: { 'Authorization': `Bearer ${ANON_JWT}` }
     });
-    expect([401, 403]).toContain(response.status());
+    if (response.ok()) {
+      expect(await response.json()).toHaveLength(0);
+    } else {
+      expect([401, 403, 404]).toContain(response.status());
+    }
   });
 
   test('GET /booking_enquiries with anon JWT returns empty', async ({ request }) => {
+    // Empirical contract (CI run 41581931856): anon identity + deny SELECT
+    // policy => 200 with an empty array; some auth paths may reject outright.
+    // Contract: zero rows exposed to anon under any auth vector.
     test.skip(!ANON_JWT, 'ANON_JWT not provided - skipping authenticated anon test');
     const response = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
       headers: { 'Authorization': `Bearer ${ANON_JWT}` }
     });
-    // Explicit deny policy for anon role should return 401/403
-    expect([401, 403]).toContain(response.status());
+    if (response.ok()) {
+      expect(await response.json()).toHaveLength(0);
+    } else {
+      expect([401, 403, 404]).toContain(response.status());
+    }
   });
 
   test('POST /booking_enquiries direct PostgREST anon insert is denied (privacy)', async ({ request }) => {
@@ -231,6 +249,7 @@ test.describe('REST API - Enquiries (Privacy)', () => {
     const response = await request.post(`${gateway}/functions/v1/enquiries`, {
       headers: { 
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ANON_JWT}`,
       },
       data: {
         offer_id: testOfferId,

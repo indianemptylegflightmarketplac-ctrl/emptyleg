@@ -105,13 +105,19 @@ test.describe('Frontend E2E', () => {
 });
 
 test.describe('Privacy Enforcement via Frontend', () => {
-  test('Booking enquiries are not readable by anonymous users (denied)', async ({ request }) => {
-    // anon must get 401/403 on the REST layer (explicit deny policy)
+  test('Booking enquiries are not readable by anonymous users (zero rows)', async ({ request }) => {
+    // Empirical contract (CI run 41581931856): with an anon JWT, the explicit
+    // deny SELECT policy yields 200 with an EMPTY array (or an outright
+    // 401/403 rejection on some gateways). Either way zero rows are exposed.
     test.skip(!ANON_JWT, 'ANON_JWT not provided - skipping anon-authenticated privacy test');
     const response = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
       headers: { 'Authorization': `Bearer ${ANON_JWT}` }
     });
-    expect([401, 403]).toContain(response.status());
+    if (response.ok()) {
+      expect(await response.json()).toHaveLength(0);
+    } else {
+      expect([401, 403, 404]).toContain(response.status());
+    }
   });
 
   test('Booking enquiries are not readable with apikey header (no rows exposed)', async ({ request }) => {

@@ -8,6 +8,9 @@ const ANON_KEY = process.env.ANON_KEY;
 const KONG_URL = process.env.KONG_URL ?? (IS_WSL ? 'http://localhost:54321' : 'http://172.23.176.1:54321');
 
 const ANON_JWT = process.env.ANON_JWT || '';
+// Service-role key: CI exports it for the local stack; only used server-side
+// under test to seed fixtures (never embedded in any product code).
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 // Fail fast if ANON_KEY is not provided
 if (!ANON_KEY) {
@@ -47,11 +50,18 @@ test.describe('Security Tests - Enquiry Ownership', () => {
   });
 
   test('Anonymous read is denied', async ({ request }) => {
+    // Empirical contract (CI run 41581931856): anon identity + explicit deny
+    // SELECT policy => 200 with an EMPTY array (or outright 401/403 on some
+    // gateways). Contract: zero rows exposed to anon.
     test.skip(!ANON_JWT, 'ANON_JWT not provided - skipping authenticated anon test');
     const response = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
       headers: { 'Authorization': `Bearer ${ANON_JWT}` }
     });
-    expect([401, 403]).toContain(response.status());
+    if (response.ok()) {
+      expect(await response.json()).toHaveLength(0);
+    } else {
+      expect([401, 403, 404]).toContain(response.status());
+    }
   });
 
   test('Anonymous update is denied', async ({ request }) => {
@@ -73,38 +83,98 @@ test.describe('Security Tests - Enquiry Ownership', () => {
   });
 
   test('Customer A cannot read Customer B enquiries', async ({ request }) => {
-    // Create two users' worth of test data via direct API calls
-    // First, we need to simulate authenticated users
-    // For this test, we verify the policy logic by checking that
-    // customer_read_own_enquiries only matches auth.users.email
-    
-    // This test verifies the policy exists and is correct
+    // Same empirically-verified contract as 'Anonymous read is denied': the
+    // anon identity resolves under the deny SELECT policy and returns 200
+    // with an EMPTY array of other customers' enquiries.
+    test.skip(!ANON_JWT, 'ANON_JWT not provided - skipping authenticated anon test');
     const response = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
       headers: { 'Authorization': `Bearer ${ANON_JWT}` }
     });
-    // Explicit deny policy for anon role should return 401/403
-    expect([401, 403]).toContain(response.status());
+    if (response.ok()) {
+      expect(await response.json()).toHaveLength(0);
+    } else {
+      expect([401, 403, 404]).toContain(response.status());
+    }
   });
 
-  test('Authenticated user cannot spoof email to read other enquiries', async ({ request }) => {
-    // This test would require actual authenticated users with different emails
-    // For now, verify the policy structure is correct by checking
-    // that the customer_read_own_enquiries policy uses auth.users.email
-    
-    // The actual test would require creating two authenticated users
-    // and verifying cross-access is denied
-    expect(true).toBeTruthy(); // Placeholder - requires Supabase Auth users
+  test('Authenticated user cannot read other customers enquiries (cross-user privacy)', async ({ request }) => {
+    // REAL implementation (no placeholders): create two Supabase Auth users
+    // via the local signup endpoint, seed one enquiry per customer with the
+    // service-role key (RLS bypass, server-side only), then verify each user
+    // can read exactly their own row and nothing else.
+    test.skip(
+      !ANON_JWT || !SERVICE_ROLE_KEY,
+      'requires local-stack auth (ANON_JWT) and service-role key to seed fixtures'
+    );
+
+    const gateway = KONG_URL || SUPABASE_URL.replace(/\/rest\/v1$/, '');
+    const suffix = Date.now();
+    const userA = { email: `cust.a.${suffix}@privacy.test`, password: 'privacy-test-pass' };
+    const userB = { email: `cust.b.${suffix}@privacy.test`, password: 'privacy-test-pass' };
+
+    async function signUp(user: { email: string; password: string }): Promise<string> {
+      const res = await request.post(`${gateway}/auth/v1/signup`, {
+        headers: { 'Content-Type': 'application/json', apikey: ANON_KEY! },
+        data: user
+      });
+      expect(res.ok()).toBeTruthy();
+      const body = await res.json();
+      expect(body.access_token).toBeTruthy();
+      return body.access_token as string;
+    }
+
+    async function seedEnquiry(email: string, name: string) {
+      const res = await request.post(`${SUPABASE_URL}/booking_enquiries`, {
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SERVICE_ROLE_KEY!,
+          Authorization: `Bearer ${SERVICE_ROLE_KEY!}`,
+        },
+        data: {
+          offer_id: 1,
+          customer_name: name,
+          customer_email: email,
+          customer_phone: '+91-9000000099',
+          passenger_count: 2
+        }
+      });
+      expect(res.status()).toBe(201);
+    }
+
+    const tokenA = await signUp(userA);
+    const tokenB = await signUp(userB);
+    await seedEnquiry(userA.email, 'Customer A');
+    await seedEnquiry(userB.email, 'Customer B');
+
+    for (const [token, email, name] of [
+      [tokenA, userA.email, 'Customer A'],
+      [tokenB, userB.email, 'Customer B'],
+    ] as const) {
+      const res = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
+        headers: { apikey: ANON_KEY!, 'Authorization': `Bearer ${token}` }
+      });
+      expect(res.ok()).toBeTruthy();
+      const rows = await res.json();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].customer_email).toBe(email);
+      expect(rows[0].customer_name).toBe(name);
+      // Other customer's enquiries are never included
+      const otherEmail = email === userA.email ? userB.email : userA.email;
+      expect(JSON.stringify(rows)).not.toContain(otherEmail);
+    }
   });
 
   test('Staff allow/deny follows role and active status', async ({ request }) => {
-    // Test that staff_read_all_enquiries requires is_active=true and correct role
-    // This would require creating staff_profiles entries
-    expect(true).toBeTruthy(); // Placeholder - requires staff users
+    // PLACEHOLDER: needs staff_profile fixtures + staff auth users; cannot
+    // be implemented without seeding staff auth identities in the disposable
+    // local stack. DO NOT treat the suite as fully covering staff RLS until
+    // this is implemented.
+    test.skip(true, 'placeholder - requires seeded staff auth users + staff_profiles fixtures')
   });
 
   test('Inactive staff denied access', async ({ request }) => {
-    // Test that inactive staff are denied
-    expect(true).toBeTruthy(); // Placeholder
+    // PLACEHOLDER: same fixture need as above (is_active=false staff user).
+    test.skip(true, 'placeholder - requires a seeded inactive staff user')
   });
 
   test('Customer UPDATE denied', async ({ request }) => {
@@ -162,8 +232,11 @@ test.describe('Security Tests - Enquiry Ownership', () => {
   });
 
   test('Expired offer rejected on create', async ({ request }) => {
-    // Would need an expired offer in the database
-    expect(true).toBeTruthy(); // Placeholder
+    // PLACEHOLDER: availability/expiry validation lives in the atomic RPC
+    // (create_enquiry_atomic); converting this to a real test needs a
+    // deterministic expired-offer fixture in the seed data. Not yet
+    // implemented - do not count staff/expiry RLS coverage as complete.
+    test.skip(true, 'placeholder - requires an expired-offer fixture in seed data');
   });
 
   test('Over-capacity offer rejected on create', async ({ request }) => {
@@ -197,28 +270,76 @@ test.describe('Security Tests - Enquiry Ownership', () => {
 });
 
 test.describe('Security Tests - Frontend Bundle', () => {
-  test('Production bundle contains no service-role key', async ({ page }) => {
-    // This would require building the frontend and checking the bundle
-    // For now, verify the config.js doesn't contain secrets
-    expect(true).toBeTruthy();
+  // CI's local-stack-tests job serves the exact public/ tree at :5173.
+  const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://127.0.0.1:5173';
+
+  async function servedBodies(request: any): Promise<Map<string, string>> {
+    const targets = ['/', '/config.js', '/marketplace/'];
+    const bodies = new Map<string, string>();
+    for (const t of targets) {
+      const res = await request.get(`${FRONTEND_URL}${t}`);
+      if (res.ok()) bodies.set(t, await res.text());
+    }
+    return bodies;
+  }
+
+  test('Production bundle contains no service-role key', async ({ request }) => {
+    const bodies = await servedBodies(request);
+    expect(bodies.size).toBeGreaterThan(0);
+    for (const [target, text] of bodies) {
+      if (SERVICE_ROLE_KEY) {
+        expect(text.includes(SERVICE_ROLE_KEY)).toBeFalsy();
+      }
+      expect(text, target).not.toMatch(/service[_-]?role/i);
+      expect(text, target).not.toMatch(/SUPABASE_SERVICE_ROLE_KEY/i);
+    }
   });
 
-  test('Production bundle contains no JWT secret', async ({ page }) => {
-    expect(true).toBeTruthy();
+  test('Production bundle contains no JWT secret', async ({ request }) => {
+    const bodies = await servedBodies(request);
+    for (const [target, text] of bodies) {
+      expect(text, target).not.toMatch(/JWT_SECRET/i);
+      expect(text, target).not.toMatch(/jwt[_-]?signing[_-]?secret/i);
+    }
   });
 
-  test('Production bundle contains no pre-signed JWT', async ({ page }) => {
-    expect(true).toBeTruthy();
+  test('Production HTML contains no pre-signed JWT', async ({ request }) => {
+    // NOTE: config files (config.env.js / config.local.js) legitimately carry
+    // the publishable anon key, which is itself a JWT; this assertion is
+    // therefore scoped to the served HTML pages. Rotated HIGH-privilege
+    // tokens (service role, staff JWTs) must never appear anywhere.
+    const bodies: Array<[string, string]> = [];
+    for (const t of ['/', '/marketplace/']) {
+      const res = await request.get(`${FRONTEND_URL}${t}`);
+      if (res.ok()) bodies.push([t, await res.text()]);
+    }
+    expect(bodies.length).toBeGreaterThan(0);
+    for (const [target, text] of bodies) {
+      expect(text, target).not.toMatch(/eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/);
+    }
   });
 
-  test('Production bundle contains no privileged token', async ({ page }) => {
-    expect(true).toBeTruthy();
+  test('Production bundle contains no privileged token', async ({ request }) => {
+    if (!SERVICE_ROLE_KEY) {
+      test.skip(true, 'SERVICE_ROLE_KEY not exported - nothing to diff against');
+    }
+    const bodies = await servedBodies(request);
+    // The privileged service-role JWT must never ship to the browser; the
+    // publishable anon key may (it equals the anon role's public identity).
+    for (const [target, text] of bodies) {
+      expect(text, target).not.toContain(SERVICE_ROLE_KEY);
+    }
   });
 
-  test('Missing config fails closed', async ({ page }) => {
-    // Test that missing config shows error
-    await page.goto('about:blank');
-    expect(true).toBeTruthy(); // Placeholder
+  test('Missing config fails closed', async ({ request }) => {
+    // config.js is source-level fail-closed code (throws on missing config).
+    // The live runtime behavior is asserted by the frontend suite's
+    // 'Runtime config is injected at page load' + console-hygiene tests, so
+    // this marker is satisfied by infrastructure rather than a fixture.
+    const res = await request.get(`${FRONTEND_URL}/config.js`);
+    const text = await res.text();
+    expect(text).toMatch(/Missing required configuration/);
+    expect(text).toMatch(/throw new Error/);
   });
 });
 
@@ -234,8 +355,9 @@ test.describe('Security Tests - Offer Validation', () => {
   });
 
   test('Expired offer rejected on create', async ({ request }) => {
-    // Would need an expired offer in the database
-    expect(true).toBeTruthy(); // Placeholder
+    // PLACEHOLDER: same fixture need as the suite above (deterministic
+    // expired/withdrawn offer wiring); not yet implemented.
+    test.skip(true, 'placeholder - requires an expired-offer fixture in seed data');
   });
 
   test('Unavailable offer rejected on create', async ({ request }) => {
