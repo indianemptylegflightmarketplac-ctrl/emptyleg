@@ -293,8 +293,11 @@
   </footer>
 
   <!-- Runtime configuration loader -->
-  <script src="config.js"></script>
+  <!-- config.local.js (gitignored, local dev only) MUST load BEFORE config.js,
+       which reads window.__ENV_LOCAL__. Injected window.__ENV__ still wins
+       over local config because config.js merges injected > local. -->
   <script src="config.local.js"></script>
+  <script src="config.js"></script>
 
   <script>
     const SUPABASE_URL = window.__ENV__?.SUPABASE_URL;
