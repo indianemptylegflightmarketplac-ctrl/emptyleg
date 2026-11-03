@@ -189,25 +189,20 @@ test.describe('Frontend E2E', () => {
 });
 
 test.describe('Privacy Enforcement via Frontend', () => {
-  test('Anonymous user cannot see other enquiries', async ({ page }) => {
-    // Direct API call to verify backend privacy
+  test('Anonymous user cannot see other enquiries (denied)', async ({ page }) => {
+    // Direct API call to verify backend privacy - anon should be denied
     const response = await page.request.get('http://localhost:3000/booking_enquiries?select=*', {
       headers: { apikey: ANON_KEY }
     });
-    expect(response.ok()).toBeTruthy();
-    const data = await response.json();
-    expect(data.length).toBe(0);
+    expect([401, 403]).toContain(response.status());
   });
 
-  test('Submitted enquiry not visible to other anonymous users', async ({ page }) => {
+  test('Submitted enquiry not visible to other anonymous users (denied)', async ({ page }) => {
     test.skip(!ANON_JWT, 'ANON_JWT not provided - skipping authenticated anon test');
-    // Submit an enquiry
-    const jwt = ANON_JWT;
-    await page.request.post('http://localhost:3000/booking_enquiries', {
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${jwt}`
-      },
+    // Submit an enquiry via Edge Function (the only allowed path)
+    const gateway = 'http://localhost:54321';
+    await page.request.post(`${gateway}/functions/v1/enquiries`, {
+      headers: { 'Content-Type': 'application/json' },
       data: {
         offer_id: 1,
         customer_name: 'Privacy Test',
@@ -217,11 +212,10 @@ test.describe('Privacy Enforcement via Frontend', () => {
       }
     });
     
-    // Try to read all enquiries as anon - should be empty
+    // Try to read all enquiries as anon - should be denied (401/403)
     const response = await page.request.get('http://localhost:3000/booking_enquiries?select=*', {
       headers: { apikey: ANON_KEY }
     });
-    const data = await response.json();
-    expect(data.length).toBe(0);
+    expect([401, 403]).toContain(response.status());
   });
 });

@@ -185,9 +185,8 @@ test.describe('REST API - Enquiries (Privacy)', () => {
     const response = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
       headers: { 'Authorization': `Bearer ${ANON_JWT}` }
     });
-    expect(response.ok()).toBeTruthy();
-    const enquiries = await response.json();
-    expect(enquiries.length).toBe(0);
+    // Explicit deny policy for anon role should return 401/403
+    expect([401, 403]).toContain(response.status());
   });
 
   test('POST /booking_enquiries direct PostgREST anon insert is denied (privacy)', async ({ request }) => {

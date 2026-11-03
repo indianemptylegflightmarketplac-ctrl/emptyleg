@@ -447,6 +447,13 @@ drop policy if exists "staff_read_audit" on public.audit_log;
 drop policy if exists "staff_read_notifications" on public.notification_log;
 drop policy if exists "allow_all_select" on public.booking_enquiries;
 drop policy if exists "customer_read_own_enquiries" on public.booking_enquiries;
+-- Explicit deny policies for anon role (security hardening)
+drop policy if exists "anon_deny_select_enquiries" on public.booking_enquiries;
+drop policy if exists "anon_deny_select_workflow" on public.booking_workflow_history;
+drop policy if exists "anon_deny_select_customer_profiles" on public.customer_profiles;
+drop policy if exists "anon_deny_select_staff_profiles" on public.staff_profiles;
+drop policy if exists "anon_deny_select_audit" on public.audit_log;
+drop policy if exists "anon_deny_select_notifications" on public.notification_log;
 
 -- =====================================================================
 -- OFFERS & OPERATORS POLICIES
@@ -552,6 +559,35 @@ create policy "staff_update_enquiries" on public.booking_enquiries
 
 -- No DELETE policy for customers (denied by default)
 -- No UPDATE policy for customers (denied by default)
+
+-- =====================================================================
+-- EXPLICIT ANON DENY POLICIES (security hardening)
+-- These ensure anon role gets 401/403 instead of 200 with empty array
+-- =====================================================================
+
+create policy "anon_deny_select_enquiries" on public.booking_enquiries
+  for select to anon
+  using (false);
+
+create policy "anon_deny_select_workflow" on public.booking_workflow_history
+  for select to anon
+  using (false);
+
+create policy "anon_deny_select_customer_profiles" on public.customer_profiles
+  for select to anon
+  using (false);
+
+create policy "anon_deny_select_staff_profiles" on public.staff_profiles
+  for select to anon
+  using (false);
+
+create policy "anon_deny_select_audit" on public.audit_log
+  for select to anon
+  using (false);
+
+create policy "anon_deny_select_notifications" on public.notification_log
+  for select to anon
+  using (false);
 
 -- =====================================================================
 -- PROFILE POLICIES

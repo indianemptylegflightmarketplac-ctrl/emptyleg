@@ -81,9 +81,8 @@ test.describe('Security Tests - Enquiry Ownership', () => {
     const response = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
       headers: { 'Authorization': `Bearer ${ANON_JWT}` }
     });
-    expect(response.ok()).toBeTruthy();
-    const data = await response.json();
-    expect(data.length).toBe(0); // anon JWT should also get empty array
+    // Explicit deny policy for anon role should return 401/403
+    expect([401, 403]).toContain(response.status());
   });
 
   test('Authenticated user cannot spoof email to read other enquiries', async ({ request }) => {
