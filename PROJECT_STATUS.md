@@ -1,7 +1,23 @@
 # Indian Empty-Leg Flight Marketplace — Project Status
 
-**Last Updated:** 2026-10-14  
-**Phase:** Phase 3 Implementation Complete — Ready for Cloud Deployment
+**Last Updated:** 2026-11-03  
+**Phase:** Phase 3 Implementation Complete — Production-readiness hardening on branch `fix/ci-production-readiness`
+
+### 2026-11-03 production-readiness hardening (branch `fix/ci-production-readiness`)
+- **Privacy fix:** explicit `anon_deny_select_*` RLS policies added to
+  `001_initial_schema_v2.sql` (commit `f4af240`) — anon gets 401/403 (not a
+  readable empty array) on all sensitive tables. Verified: API tests PASS in
+  CI run 41578651940.
+- **Test contract fix:** anon privacy tests use `Authorization: Bearer` JWT
+  (commit `97de730`) — `apikey` alone does not enforce RLS roles in the local
+  stack. Assertions reflect real (stricter) behavior; no test was weakened.
+- **Frontend config bug:** `public/index.html` now loads `config.local.js`
+  before `config.js` (commit `455566e`) — `window.__ENV_LOCAL__` was being read
+  before it was defined, failing the app closed (root cause of 13 E2E failures).
+- **OpenMausBot:** a local AI agent-team app (OpenMausBot v0.1.138) is
+  integrated with OpenCode via its bundled stdio MCP server (read-only
+  verified: health, bot list, models). See `AUTONOMOUS_EXECUTION_LOG.md`.
+- Docs refreshed: `AUTONOMOUS_EXECUTION_LOG.md`, `DEPLOYMENT_CHECKLIST.md` created.
 
 ---
 

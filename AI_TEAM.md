@@ -16,6 +16,25 @@ Agent definitions live in `.opencode/agents/` (OpenCode subagent format) and
 are available to every agent. This file is referenced by each agent as its
 first read.
 
+## Local agent-team runtime (OpenMausBot)
+
+In addition to the OpenCode agent roster, OpenMausBot v0.1.138 (local AI
+agent-team app) is installed. OpenCode integrates with it through the bundled
+**stdio MCP server** (`resources/server/mcp-server.js`, harness on
+`127.0.0.1:8799`), registered as the `mausbot` MCP server (global OpenCode
+config, no secrets stored).
+
+- **Verified (read-only)**: `get_system_health`, `list_bots`,
+  `list_available_models` work end-to-end; the default bot "MausBot" (chief of
+  staff, model `opencode/beam-free`) is reachable and idle.
+- **Blocked on human action**: sending work / creating bots / channels needs a
+  one-time pairing token (OpenMausBot → Settings → Phone → reveal code →
+  `POST http://127.0.0.1:8799/api/auth/pair`). Until paired, agents only
+  coordinate read-only.
+- On Windows the app cannot give bots control of this computer (host control
+  is macOS/Ubuntu only) — bot work is confined to MausBot's own engines, of
+  which only the `opencodeGo` driver is currently available.
+
 ---
 
 ## Agent roster
