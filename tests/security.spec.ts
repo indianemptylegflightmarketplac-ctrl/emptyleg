@@ -28,6 +28,39 @@ test.describe('Security Tests - Enquiry Ownership', () => {
     testOfferId = offers[0].id;
   });
 
+  // Seed helpers: only run with the service-role key (RLS bypass), the same
+  // way production server-side code uses it. Returns the new row so the
+  // zero-mutation assertions below can compare exact before/after state.
+  async function seedServiceEnquiry(request: any, email: string, name: string): Promise<{ id: number; status: string }> {
+    const res = await request.post(`${SUPABASE_URL}/booking_enquiries?select=id,status`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+        apikey: SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
+      },
+      data: {
+        offer_id: testOfferId,
+        customer_name: name,
+        customer_email: email,
+        customer_phone: '+91-9000000000',
+        passenger_count: 2
+      }
+    });
+    const text = await res.text();
+    expect(res.status(), `service-role seed failed: ${res.status()} ${text.slice(0, 300)}`).toBe(201);
+    const rows = JSON.parse(text);
+    expect(rows[0]?.id, `service-role seed body: ${text.slice(0, 300)}`).toBeTruthy();
+    return rows[0];
+  }
+
+  async function readServiceEnquiry(request: any, id: number): Promise<Array<Record<string, unknown>>> {
+    const res = await request.get(`${SUPABASE_URL}/booking_enquiries?id=eq.${id}&select=*`, {
+      headers: { apikey: SERVICE_ROLE_KEY, 'Authorization': `Bearer ${SERVICE_ROLE_KEY}` }
+    });
+    return (await res.json()) as Array<Record<string, unknown>>;
+  }
+
   test('Anonymous create via direct PostgREST is denied (privacy)', async ({ request }) => {
     // DESIGN: anonymous users CANNOT insert booking_enquiries directly via
     // PostgREST — submissions go through the Edge Function
@@ -64,22 +97,51 @@ test.describe('Security Tests - Enquiry Ownership', () => {
     }
   });
 
-  test('Anonymous update is denied', async ({ request }) => {
-    const response = await request.patch(`${SUPABASE_URL}/booking_enquiries?id=eq.1`, {
-      headers: { 
+  test('Anonymous update is denied (zero mutation)', async ({ request }) => {
+    // Empirical contract (CI run 41583863591): anon PATCH via PostgREST
+    // returns 204, NOT a 401/403 error. With RLS enabled and no anon UPDATE
+    // policy on booking_enquiries, the UPDATE statement matches ZERO rows,
+    // so PostgREST answers 204 (zero-mutation success) — that is its
+    // documented semantics for an empty WHERE match, not a data leak.
+    // Contract: the target row must be provably unchanged afterwards,
+    // verified through the service-role key (RLS bypass).
+    test.skip(
+      !SERVICE_ROLE_KEY || !testOfferId,
+      'requires SUPABASE_SERVICE_ROLE_KEY + a valid offer id to seed the mutation target'
+    );
+    const row = await seedServiceEnquiry(request, 'anon.patch@privacy.test', 'Anon Patch Target');
+    const res = await request.patch(`${SUPABASE_URL}/booking_enquiries?id=eq.${row.id}`, {
+      headers: {
         'Content-Type': 'application/json',
-        'apikey': ANON_KEY 
+        'apikey': ANON_KEY!
       },
       data: { status: 'CANCELLED' }
     });
-    expect([401, 403, 404]).toContain(response.status());
+    const text = await res.text();
+    expect([204, 400, 401, 403, 404], `anon PATCH: status=${res.status()} body=${text.slice(0, 300)}`).toContain(res.status());
+    const rows = await readServiceEnquiry(request, row.id);
+    expect(rows, 'anonymously PATCHed enquiry must still exist').toHaveLength(1);
+    expect(rows[0].status, 'anon PATCH must not mutate the enquiry status').toBe(row.status);
+    expect(rows[0].customer_name).toBe('Anon Patch Target');
   });
 
-  test('Anonymous delete is denied', async ({ request }) => {
-    const response = await request.delete(`${SUPABASE_URL}/booking_enquiries?id=eq.1`, {
-      headers: { apikey: ANON_KEY }
+  test('Anonymous delete is denied (zero mutation)', async ({ request }) => {
+    // Same empirical 204 semantics as the PATCH case above (CI run
+    // 41583863591): DELETE with anon identity matches zero rows under RLS
+    // and PostgREST returns 204. Contract: the enquiry must still exist
+    // afterwards (service-role verification).
+    test.skip(
+      !SERVICE_ROLE_KEY || !testOfferId,
+      'requires SUPABASE_SERVICE_ROLE_KEY + a valid offer id to seed the mutation target'
+    );
+    const row = await seedServiceEnquiry(request, 'anon.delete@privacy.test', 'Anon Delete Target');
+    const res = await request.delete(`${SUPABASE_URL}/booking_enquiries?id=eq.${row.id}`, {
+      headers: { apikey: ANON_KEY! }
     });
-    expect([401, 403, 404]).toContain(response.status());
+    expect([204, 400, 401, 403, 404], `anon DELETE: status=${res.status()}`).toContain(res.status());
+    const rows = await readServiceEnquiry(request, row.id);
+    expect(rows, 'anonymously DELETEd enquiry must still exist').toHaveLength(1);
+    expect(rows[0].customer_name).toBe('Anon Delete Target');
   });
 
   test('Customer A cannot read Customer B enquiries', async ({ request }) => {
@@ -131,14 +193,15 @@ test.describe('Security Tests - Enquiry Ownership', () => {
           Authorization: `Bearer ${SERVICE_ROLE_KEY!}`,
         },
         data: {
-          offer_id: 1,
+          offer_id: testOfferId,
           customer_name: name,
           customer_email: email,
           customer_phone: '+91-9000000099',
           passenger_count: 2
         }
       });
-      expect(res.status()).toBe(201);
+      const text = await res.text();
+      expect(res.status(), `service-role seed for ${email}: ${res.status()} ${text.slice(0, 300)}`).toBe(201);
     }
 
     const tokenA = await signUp(userA);
@@ -146,22 +209,49 @@ test.describe('Security Tests - Enquiry Ownership', () => {
     await seedEnquiry(userA.email, 'Customer A');
     await seedEnquiry(userB.email, 'Customer B');
 
-    for (const [token, email, name] of [
-      [tokenA, userA.email, 'Customer A'],
-      [tokenB, userB.email, 'Customer B'],
-    ] as const) {
-      const res = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
+    // Some gateway configurations accept signup-issued tokens differently
+    // from password-grant tokens; if the signup token is rejected, retry
+    // once with a password grant (the same credential set) before failing —
+    // and always include the exact status/body in the failure message so
+    // the CI log carries full evidence.
+    async function readOwnEnquiries(token: string, email: string, name: string) {
+      let res = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
         headers: { apikey: ANON_KEY!, 'Authorization': `Bearer ${token}` }
       });
-      expect(res.ok()).toBeTruthy();
+      if (!res.ok()) {
+        const first = `signup-token GET: status=${res.status()} body=${(await res.text()).slice(0, 300)}`;
+        console.log(`[cross-user] ${email} -> ${first}`);
+        const loginRes = await request.post(`${gateway}/auth/v1/token?grant_type=password`, {
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: ANON_KEY!,
+            'Authorization': `Bearer ${ANON_JWT}`
+          },
+          data: { email, password: 'privacy-test-pass' }
+        });
+        const loginBody = await loginRes.json();
+        expect(loginBody.access_token, `password-grant login failed: status=${loginRes.status()} body=${JSON.stringify(loginBody).slice(0, 300)}`).toBeTruthy();
+        res = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
+          headers: { apikey: ANON_KEY!, 'Authorization': `Bearer ${loginBody.access_token as string}` }
+        });
+        if (!res.ok()) {
+          const second = `login-token GET: status=${res.status()} body=${(await res.text()).slice(0, 300)}`;
+          console.log(`[cross-user] ${email} -> ${second}`);
+          expect(res.ok(), `${first} | retry ${second}`).toBeTruthy();
+        }
+      }
+      expect(res.ok(), `GET /booking_enquiries as ${email}: status=${res.status()}`).toBeTruthy();
       const rows = await res.json();
-      expect(rows).toHaveLength(1);
+      expect(rows, `${email}: expected exactly own enquiry, got ${JSON.stringify(rows).slice(0, 300)}`).toHaveLength(1);
       expect(rows[0].customer_email).toBe(email);
       expect(rows[0].customer_name).toBe(name);
       // Other customer's enquiries are never included
       const otherEmail = email === userA.email ? userB.email : userA.email;
       expect(JSON.stringify(rows)).not.toContain(otherEmail);
     }
+
+    await readOwnEnquiries(tokenA, userA.email, 'Customer A');
+    await readOwnEnquiries(tokenB, userB.email, 'Customer B');
   });
 
   test('Staff allow/deny follows role and active status', async ({ request }) => {
@@ -177,22 +267,46 @@ test.describe('Security Tests - Enquiry Ownership', () => {
     test.skip(true, 'placeholder - requires a seeded inactive staff user')
   });
 
-  test('Customer UPDATE denied', async ({ request }) => {
-    const response = await request.patch(`${SUPABASE_URL}/booking_enquiries?id=eq.1`, {
-      headers: { 
+  test('Anon Bearer JWT update is denied (zero mutation)', async ({ request }) => {
+    // Historically misnamed 'Customer UPDATE denied': this exercises the
+    // second anon auth vector (Bearer anon JWT instead of apikey only).
+    // Same empirical 204 zero-row-match semantics as the apikey PATCH test
+    // (CI run 41583863591); the row must be provably unchanged.
+    test.skip(
+      !ANON_JWT || !SERVICE_ROLE_KEY || !testOfferId,
+      'requires ANON_JWT + SUPABASE_SERVICE_ROLE_KEY + a valid offer id'
+    );
+    const row = await seedServiceEnquiry(request, 'jwt.patch@privacy.test', 'Jwt Patch Target');
+    const res = await request.patch(`${SUPABASE_URL}/booking_enquiries?id=eq.${row.id}`, {
+      headers: {
         'Content-Type': 'application/json',
-        'apikey': ANON_KEY 
+        'Authorization': `Bearer ${ANON_JWT}`
       },
       data: { status: 'CANCELLED' }
     });
-    expect([401, 403, 404]).toContain(response.status());
+    const text = await res.text();
+    expect([204, 400, 401, 403, 404], `bearer anon PATCH: status=${res.status()} body=${text.slice(0, 300)}`).toContain(res.status());
+    const rows = await readServiceEnquiry(request, row.id);
+    expect(rows, 'Bearer-JWT PATCHed enquiry must still exist').toHaveLength(1);
+    expect(rows[0].status, 'Bearer anon PATCH must not mutate the enquiry status').toBe(row.status);
+    expect(rows[0].customer_name).toBe('Jwt Patch Target');
   });
 
-  test('Customer DELETE denied', async ({ request }) => {
-    const response = await request.delete(`${SUPABASE_URL}/booking_enquiries?id=eq.1`, {
-      headers: { apikey: ANON_KEY }
+  test('Anon Bearer JWT delete is denied (zero mutation)', async ({ request }) => {
+    // Historically misnamed 'Customer DELETE denied'; Bearer anon JWT vector.
+    // Same contract: whatever the status, the enquiry must still exist.
+    test.skip(
+      !ANON_JWT || !SERVICE_ROLE_KEY || !testOfferId,
+      'requires ANON_JWT + SUPABASE_SERVICE_ROLE_KEY + a valid offer id'
+    );
+    const row = await seedServiceEnquiry(request, 'jwt.delete@privacy.test', 'Jwt Delete Target');
+    const res = await request.delete(`${SUPABASE_URL}/booking_enquiries?id=eq.${row.id}`, {
+      headers: { 'Authorization': `Bearer ${ANON_JWT}` }
     });
-    expect([401, 403, 404]).toContain(response.status());
+    expect([204, 400, 401, 403, 404], `bearer anon DELETE: status=${res.status()}`).toContain(res.status());
+    const rows = await readServiceEnquiry(request, row.id);
+    expect(rows, 'Bearer-JWT DELETEd enquiry must still exist').toHaveLength(1);
+    expect(rows[0].customer_name).toBe('Jwt Delete Target');
   });
 
   test('Missing offer rejected on create', async ({ request }) => {
