@@ -293,9 +293,11 @@
   </footer>
 
   <!-- Runtime configuration loader -->
-  <!-- config.local.js (gitignored, local dev only) MUST load BEFORE config.js,
-       which reads window.__ENV_LOCAL__. Injected window.__ENV__ still wins
-       over local config because config.js merges injected > local. -->
+  <!-- Load order is strictly: injected deploy config (config.env.js, generated
+       by the deploy job and NEVER committed) -> config.local.js (gitignored,
+       local dev) -> config.js (merges __ENV__ (injected) > __ENV_LOCAL__ >
+       fails closed). Each file is optional except the last. -->
+  <script src="config.env.js"></script>
   <script src="config.local.js"></script>
   <script src="config.js"></script>
 
