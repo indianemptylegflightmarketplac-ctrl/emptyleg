@@ -114,11 +114,21 @@ test.describe('Privacy Enforcement via Frontend', () => {
     expect([401, 403]).toContain(response.status());
   });
 
-  test('Booking enquiries are not readable with apikey header (denied)', async ({ request }) => {
-    // apikey-only requests must not bypass the rest gateway's auth either
+  test('Booking enquiries are not readable with apikey header (no rows exposed)', async ({ request }) => {
+    // Real local-stack behavior (verified in CI run 41581245387): with only
+    // the apikey header, anon role applies the explicit deny SELECT policy,
+    // so PostgREST answers 200 with an EMPTY array; identity-bearing Bearer
+    // requests are rejected outright (401/403). The privacy contract is
+    // "no enquiry rows are ever returned", not a specific status code.
     const response = await request.get(`${SUPABASE_URL}/booking_enquiries?select=*`, {
       headers: { apikey: ANON_KEY! }
     });
-    expect([401, 403, 404]).toContain(response.status());
+    if (response.ok()) {
+      const rows = await response.json();
+      expect(Array.isArray(rows)).toBe(true);
+      expect(rows).toHaveLength(0); // deny policy must leak zero rows
+    } else {
+      expect([401, 403, 404]).toContain(response.status());
+    }
   });
 });

@@ -89,6 +89,10 @@ jobs:
             echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
             echo "KONG_URL=$GATEWAY_ROOT"
           } >> "$GITHUB_ENV"
+          # ANON_KEY is itself the anon JWT in the local stack (same value);
+          # exporting it as ANON_JWT lets the Bearer-authenticated privacy
+          # tests actually execute instead of silently skipping.
+          echo "ANON_JWT=$ANON_KEY" >> "$GITHUB_ENV"
       - name: Write frontend runtime config (config.local.js)
         run: |
           # index.html loads config.local.js before config.js; this binds the

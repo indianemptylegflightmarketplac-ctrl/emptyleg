@@ -89,7 +89,14 @@ test.describe('REST API - Enquiries (Privacy)', () => {
     testOfferId = offers[0].id;
   });
 
-  test('POST /booking_enquiries creates enquiry (anon, no return=representation)', async ({ request }) => {
+  test('POST /booking_enquiries direct anon insert is denied (privacy)', async ({ request }) => {
+    // DESIGN: anonymous users CANNOT insert booking_enquiries directly via
+    // PostgREST, under either auth vector (Bearer anon JWT or apikey). All
+    // public enquiry submissions MUST go through the Edge Function
+    // (POST /functions/v1/enquiries) which uses the service-role key to call
+    // the atomic create_enquiry_atomic RPC. There is intentionally no anon
+    // INSERT policy on booking_enquiries; anon also has an explicit deny
+    // SELECT policy. See migrations/001_initial_schema_v2.sql lines 505-570.
     test.skip(!ANON_JWT, 'ANON_JWT not provided - skipping authenticated anon test');
     const response = await request.post(`${SUPABASE_URL}/booking_enquiries`, {
       headers: { 
@@ -109,12 +116,13 @@ test.describe('REST API - Enquiries (Privacy)', () => {
       }
     });
     
-    // Should succeed with 201, no body (anon cannot SELECT back the inserted row)
-    expect(response.ok()).toBeTruthy();
-    expect(response.status()).toBe(201);
+    // No anon INSERT policy exists -> PostgREST must reject this request
+    expect([401, 403, 404]).toContain(response.status());
   });
 
-  test('POST /booking_enquiries with return=representation FAILS (RLS blocks SELECT back)', async ({ request }) => {
+  test('POST /booking_enquiries with return=representation FAILS (no anon insert path)', async ({ request }) => {
+    // No anon INSERT policy exists, so there is no backing row to return:
+    // requests must be rejected outright under either Prefer mode.
     test.skip(!ANON_JWT, 'ANON_JWT not provided - skipping authenticated anon test');
     const response = await request.post(`${SUPABASE_URL}/booking_enquiries`, {
       headers: { 
@@ -131,45 +139,47 @@ test.describe('REST API - Enquiries (Privacy)', () => {
       }
     });
     
-    // Should fail because return=representation tries to SELECT the inserted row
-    // which is blocked by RLS for anon (401 = JWT not accepted for this operation, 403 = RLS violation)
-    expect([401, 403]).toContain(response.status());
+    expect([401, 403, 404]).toContain(response.status());
   });
 
-  test('POST /booking_enquiries validates required fields', async ({ request }) => {
-    test.skip(!ANON_JWT, 'ANON_JWT not provided - skipping authenticated anon test');
-    const response = await request.post(`${SUPABASE_URL}/booking_enquiries`, {
+  test('POST /functions/v1/enquiries (Edge Function) rejects missing required fields', async ({ request }) => {
+    // Public path enforces required-field validation server-side.
+    const gateway = GATEWAY_URL || SUPABASE_URL.replace(/\/rest\/v1$/, '');
+    const response = await request.post(`${gateway}/functions/v1/enquiries`, {
       headers: { 
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ANON_JWT}`,
       },
       data: {
         offer_id: testOfferId,
-        // missing required fields
+        // missing customer_name / customer_email / customer_phone
       }
     });
     
-    expect(response.status()).toBeGreaterThanOrEqual(400);
+    expect(response.status()).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe('Missing required fields');
   });
 
-  test('POST /booking_enquiries passenger count - DB constraint enforces 1-19', async ({ request }) => {
-    test.skip(!ANON_JWT, 'ANON_JWT not provided - skipping authenticated anon test');
-    const response = await request.post(`${SUPABASE_URL}/booking_enquiries`, {
+  test('POST /functions/v1/enquiries (Edge Function) rejects out-of-range passenger count', async ({ request }) => {
+    // DB constraint is 1..19 (migration 003) and the Edge Function
+    // pre-validates the same range before calling the atomic RPC.
+    const gateway = GATEWAY_URL || SUPABASE_URL.replace(/\/rest\/v1$/, '');
+    const response = await request.post(`${gateway}/functions/v1/enquiries`, {
       headers: { 
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ANON_JWT}`,
       },
       data: {
         offer_id: testOfferId,
-        customer_name: 'Test',
+        customer_name: 'Test Customer',
         customer_email: 'test@example.com',
         customer_phone: '+91-9876543210',
         passenger_count: 999
       }
     });
     
-    // DB enforces passenger_count between 1 and 19 (migration 003)
     expect(response.status()).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe('Passenger count must be between 1 and 19');
   });
 
   test('GET /booking_enquiries returns empty for anon (privacy)', async ({ request }) => {
@@ -231,9 +241,14 @@ test.describe('REST API - Enquiries (Privacy)', () => {
       }
     });
     
-    // Edge Function either returns 201 on success (service role creates via RPC)
-    // or 400/401/403 for input/auth errors (both are correct design behaviors)
-    expect([200, 201, 400, 401, 403, 404, 500]).toContain(response.status());
+    // Edge Function validates + calls the atomic RPC with the service role.
+    // The offer id is taken from available_offers_view, so a valid request
+    // must create the enquiry: machine-verified 201 with an enquiry_id.
+    expect(response.status()).toBe(201);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+    expect(body.enquiry_id).toBeTruthy();
+
   });
 });
 
