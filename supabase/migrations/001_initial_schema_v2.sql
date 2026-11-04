@@ -479,12 +479,18 @@ create policy "public_read_authorized_operators" on public.operators
   using (authorization_status = 'authorized');
 
 -- Operators can read/update their own offers
+--
+-- CI run 41789676056 evidence: policies subquerying auth.users fail for the
+-- authenticated role with PG 42501 "permission denied for table users"
+-- (authenticated has no SELECT on auth.users in the Supabase schema).
+-- auth.email() reads the JWT email claim instead - no privileged table
+-- access, same verified-email semantics.
 create policy "operator_read_own_offers" on public.empty_leg_offers
   for select to authenticated
   using (
     operator_id in (
       select id from public.operators
-      where contact_email = (select email from auth.users where id = auth.uid())
+      where contact_email = auth.email()
     )
   );
 
@@ -493,13 +499,13 @@ create policy "operator_update_own_offers" on public.empty_leg_offers
   using (
     operator_id in (
       select id from public.operators
-      where contact_email = (select email from auth.users where id = auth.uid())
+      where contact_email = auth.email()
     )
   )
   with check (
     operator_id in (
       select id from public.operators
-      where contact_email = (select email from auth.users where id = auth.uid())
+      where contact_email = auth.email()
     )
   );
 
@@ -512,17 +518,19 @@ create policy "operator_update_own_offers" on public.empty_leg_offers
 --    All public enquiry submissions MUST go through the Edge Function
 --    (POST /functions/v1/enquiries) which uses the service-role key
 --    to call the atomic create_enquiry_atomic RPC.
+--    auth.email() (JWT claim) instead of auth.users subquery: PG 42501
+--    evidence in CI run 41789676056.
 create policy "auth_create_enquiries" on public.booking_enquiries
   for insert to authenticated
   with check (
-    customer_email = (select email from auth.users where id = auth.uid())
+    customer_email = auth.email()
   );
 
 -- 2. Customer SELECT: own enquiries only (matched by verified email)
 create policy "customer_read_own_enquiries" on public.booking_enquiries
   for select to authenticated
   using (
-    customer_email = (select email from auth.users where id = auth.uid())
+    customer_email = auth.email()
   );
 
 -- 4. Staff SELECT: all enquiries (active staff with valid role)
