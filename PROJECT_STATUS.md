@@ -3,6 +3,28 @@
 **Last Updated:** 2026-11-03  
 **Phase:** Phase 3 Implementation Complete — Production-readiness hardening on branch `fix/ci-production-readiness`
 
+### 2026-11-04 session 2 — production blockers status (CI green @ `584840f`, run 41792608362)
+- **Cloudflare**: live site = Pages project `emptyleg-india` (account
+  `fa6641...`, direct-upload, no env vars). The red `Workers Builds: emptyleg`
+  check is a stray integration in an unreachable foreign account (`ff7900...`);
+  `main` is unprotected → it does not block merge. Deploy pipeline corrected
+  to target `emptyleg-india` (`584840f`).
+- **Configured autonomously** (via `gh secret/variable set`, values never
+  exposed): `SUPABASE_PROJECT_URL`, `SUPABASE_ANON_KEY` (secrets),
+  `CLOUDFLARE_ACCOUNT_ID` (variable). No service_role key exists locally.
+- **Local validation**: generator fail-closed proven live (missing env → exit
+  1, writes nothing); correct values verified in-memory; `wrangler deploy
+  --dry-run` bundles 16 assets.
+- **Built-site flow test 16/16** (`wrangler dev` + mock Edge Functions):
+  `/config.env.js` served as real JS config (NOT the SPA-fallback HTML that
+  production currently returns), offers render, enquiry modal submits with
+  Bearer auth, POST captured with offer_id intact.
+- **Human gates remaining**: (1) create CF API token (Pages: Edit) → repo
+  secret `CLOUDFLARE_API_TOKEN` — OAuth cannot mint it (403 verified);
+  (2) remove/ignore the stray `ff7900...` Workers Builds integration;
+  (3) invite + assign an independent reviewer on PR #1 (only the owner is a
+  collaborator — no reviewer exists to assign); (4) approve production deploy.
+
 ### 2026-11-04 CI verification status — ALL REQUIRED CHECKS PASS
 - **Run 41790206817** @ `ddddcee`: lint+typecheck, migration-check, cloudflare-gate, local-stack-tests all SUCCESS.
 - Test totals: API 16 pass/1 skip · Frontend 10 pass · Security 19 pass/4 skip.

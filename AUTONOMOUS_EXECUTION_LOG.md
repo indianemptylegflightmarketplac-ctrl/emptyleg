@@ -168,3 +168,97 @@ with evidence (commits, CI runs). It is append-only; newest entries at the botto
 1. Cloudflare: view the `Workers Builds: emptyleg` build log (dashboard-only), set `SUPABASE_PROJECT_URL` + `SUPABASE_ANON_KEY` build variables, ensure CF API token/account-id secrets, approve the `production` environment.
 2. Independent review of PR #1 (AI_TEAM.md contract: no self-review).
 3. Merge to `main` only after 1+2; then verify the deployed site renders offers (re-run `tests/live.spec.ts`).
+
+---
+
+## 2026-11-04 (session 2) — production blockers resolved as far as autonomously possible
+
+### Items 1–2: Cloudflare Workers Builds investigation (COMPLETE)
+- Local `wrangler whoami`: OAuth session for account `fa66418f4bdc966c2add08ec3e2766ab`
+  (aarvexfinance@gmail.com). No CF/SUPABASE env vars in the OS environment.
+- **The live site is Pages project `emptyleg-india` in THAT account**
+  (CF Pages API): `production_branch=main`, **direct-upload** (no git
+  integration, no build command, **zero env vars** configured); latest
+  deployment Oct 27, branch `master` ("Restyle" commit).
+- **The red `Workers Builds: emptyleg` check belongs to a foreign/unreachable
+  account `ff7900574a2d1aa6f74464e142f64dcf`** — a stray integration, NOT this
+  project's deploy path. `main` is NOT branch-protected (API 404), so it does
+  not block merge. Its build log is dashboard-only (human).
+- **OAuth cannot mint API tokens**: `GET /user/tokens/permission_groups` and
+  `POST /user/tokens` both → **403 Forbidden** (verified; token value never
+  printed). `CLOUDFLARE_API_TOKEN` is therefore a genuine human-only credential.
+- Fixed the deploy pipeline: `deploy-production` targeted Pages project
+  `emptyleg` (nonexistent → would create a new empty project). Corrected to
+  `emptyleg-india` (commit `584840f`).
+- Secrets/variables configured via `gh secret set`/`gh variable set` (values
+  sourced from the owner's local files, never printed or logged):
+  - `SUPABASE_PROJECT_URL` (secret) — Supabase project root URL
+  - `SUPABASE_ANON_KEY` (secret) — verified role=anon JWT by decoding payload locally
+  - `CLOUDFLARE_ACCOUNT_ID` (variable — account IDs are not sensitive)
+  - No service_role key exists anywhere in local files (verified by decoding
+    every JWT candidate — all role=anon). Nothing privileged was handled.
+
+### Item 3: wrangler.jsonc + generate-config-env.mjs clean local validation (COMPLETE)
+- `git check-ignore -v public/config.env.js` → `.gitignore:6` — can never be committed.
+- Generator run with real values → 310-byte file; contents verified IN MEMORY
+  (correct SUPABASE_URL, correct role=anon key, URL is project root — no
+  `/rest/v1` or `/functions/v1` suffix). Values never echoed to logs.
+- `npx wrangler@4 deploy --dry-run` → executes `node scripts/generate-config-env.mjs`
+  as custom build, reads **16 assets** (15 + generated config), no bindings.
+- **Fail-closed proven live**: a `wrangler dev` session started WITHOUT the
+  env vars made the generator exit 1 and write nothing ("wrote NOTHING -
+  the deployed frontend will fail closed (by design)") — wrangler aborted.
+  This is exactly the desired production behavior when build env vars are missing.
+
+### Item 4: built-site runtime test (COMPLETE — 16/16 assertions PASS)
+Environment: `wrangler dev` (port 8787, serves the real `public/` asset tree
+with the generated `config.env.js`) + local mock Edge Functions API on
+127.0.0.1:8991 (2 synthetic offers; POST returns `{enquiry_id: 90123}`;
+captures requests). Mock used instead of production Supabase because a real
+enquiry write flips a production offer to `pending_enquiry` (mutating side
+effect — not authorized). Playwright chromium drove the real flow:
+| # | Assertion | Result |
+|---|---|---|
+| 1 | `/config.env.js` → 200 | PASS |
+| 2 | content-type `text/javascript` (NOT the SPA-fallback HTML seen in prod) | PASS |
+| 3 | body starts `window.__ENV__` | PASS |
+| 4 | points at the configured API | PASS |
+| 5 | body is not HTML | PASS |
+| 6 | unknown route → HTML fallback (SPA behavior intact) | PASS |
+| 7 | `/marketplace/` renders 2 offer cards | PASS |
+| 8 | offer data visible (Citation XLS+) | PASS |
+| 9 | operator name visible | PASS |
+| 10 | enquiry modal carries offer_id 501 | PASS |
+| 11 | submit → success toast "Reference: 90123" | PASS |
+| 12 | `POST /functions/v1/enquiries` captured server-side | PASS |
+| 13 | POST had `Authorization: Bearer …` header | PASS |
+| 14 | POST body `offer_id === 501` | PASS |
+| 15 | POST body customer_name matches test data | PASS |
+| 16 | `GET /functions/v1/offers` captured with Bearer | PASS |
+The production regression this proves fixed: `/config.env.js` on the live
+site is the SPA fallback serving HTML; the fixed deploy serves real JS config.
+Cleanup: servers stopped, `public/config.env.js` + `.tmp_*` + `.wrangler/`
+dev cache deleted; `git status` clean except the user's pre-existing untracked files.
+
+### Item 5: independent reviewer (BLOCKED — no candidate exists)
+- Repo collaborators: only owner `indianemptylegflightmarketplac-ctrl` (admin).
+- No teams, no CODEOWNERS file. There is no real reviewer to assign
+  autonomously. **Human action required:** invite an external reviewer to the
+  repo (or a team), then set them as reviewer on PR #1.
+
+### Items 6–7: PR #1 + docs
+- PR #1 stays OPEN (no merge). CI green on tip `584840f` (run `41792608362`,
+  all 4 jobs SUCCESS).
+- `DEPLOYMENT_CHECKLIST.md`, `PROJECT_STATUS.md`, this log updated with the
+  findings above.
+
+### Remaining human gates (exact, complete list)
+1. **Create the Cloudflare API token** (dash → My Profile → API Tokens →
+   Create Token; **Pages: Edit** + Account Settings: Read, scoped to account
+   `fa66418f...`) and add it as repo secret `CLOUDFLARE_API_TOKEN`. This is
+   the ONLY missing credential in the deploy path.
+2. **Stray `Workers Builds: emptyleg` integration** in account `ff7900...`:
+   remove it there, or ignore (not a required check; `main` unprotected).
+3. **Invite + assign an independent reviewer** on PR #1.
+4. **Approve the `production` environment / approve deploy** after review.
+
