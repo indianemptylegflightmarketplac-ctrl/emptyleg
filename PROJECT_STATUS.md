@@ -3,6 +3,23 @@
 **Last Updated:** 2026-11-03  
 **Phase:** Phase 3 Implementation Complete — Production-readiness hardening on branch `fix/ci-production-readiness`
 
+### 2026-11-04 CI verification status — ALL REQUIRED CHECKS PASS
+- **Run 41790206817** @ `ddddcee`: lint+typecheck, migration-check, cloudflare-gate, local-stack-tests all SUCCESS.
+- Test totals: API 16 pass/1 skip · Frontend 10 pass · Security 19 pass/4 skip.
+- Skip accounting: Studio dashboard check (1, unconditional) + 4 placeholders
+  (staff-user fixtures x2, expired-offer fixture x2) — each documented inline
+  in the spec with reasons. All ANON_JWT-gated privacy tests execute in CI.
+- Two production-dangerous RLS bugs found *by the tests* and fixed:
+  PG 42P17 staff_profiles policy recursion (run 41585240456) and
+  PG 42501 auth.users permission denied (run 41789676056). Both fixed in
+  `001_initial_schema_v2.sql` (`staff_is_admin()` SECURITY DEFINER helper;
+  `auth.email()` instead of auth.users subqueries).
+- Remaining red: `Workers Builds: emptyleg` (Cloudflare dashboard-side
+  integration; build log not accessible without dashboard access).
+- Deploys correctly skipped (no CF secrets on branch; `production` needs
+  human approval). See AUTONOMOUS_EXECUTION_LOG.md (2026-11-04 entry) for
+  the full commit-to-evidence chain.
+
 ### 2026-11-03 production-readiness hardening (branch `fix/ci-production-readiness`)
 - **Privacy fix:** explicit `anon_deny_select_*` RLS policies added to
   `001_initial_schema_v2.sql` (commit `f4af240`) — anon gets 401/403 (not a
@@ -51,12 +68,11 @@
 - Edge Functions exposed at `/functions/v1`
 
 ### 5. CI/CD (GitHub Actions)
-- Lint & TypeCheck
-- Migration check (dry-run against PostgreSQL)
-- API tests (14 tests, Playwright)
-- Frontend E2E tests (16 tests, Playwright)
-- Security tests
-- Deploy check on main branch
+- Lint & TypeCheck (tsc --noEmit)
+- Migration check (ephemeral local stack, Supabase CLI pinned v2.122.0)
+- local-stack-tests: API (17 tests) + Frontend E2E (10) + Security (23) via Playwright
+- Cloudflare gate + deploy jobs (deploy-time `window.__ENV__` injection via `scripts/generate-config-env.mjs`; fail-closed on missing secrets)
+- Deploy jobs require `production` environment approval (human gate)
 
 ### 6. Configuration & Security
 - `config.js`: Production-safe merge order (injected > local), fails closed
@@ -207,7 +223,7 @@ python3 -m http.server 5173 -d public
 - **Edge Functions use service-role key**: Server-only, bypasses RLS safely
 - **Atomic RPC for enquiries**: Prevents overbooking, validates offer state
 - **Rate limiting**: Kong plugin on `/functions/v1/enquiries`
-- **RLS policies**: Anon INSERT only, authenticated email enforcement, staff role-based access
+- **RLS policies**: Anon INSERT denied for booking_enquiries (public path = Edge Function), authenticated email enforcement via `auth.email()`, staff access via `staff_is_admin()` SECURITY DEFINER helper (recursion-safe), explicit anon deny policies on all sensitive tables
 - **Error sanitization**: No SQL errors exposed to clients
 
 ---

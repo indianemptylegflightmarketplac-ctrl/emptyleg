@@ -124,3 +124,47 @@ with evidence (commits, CI runs). It is append-only; newest entries at the botto
   destructive DB actions, no secrets exposed, user's untracked files preserved
   (FINAL_*.md, admin_live.html, supabase/functions/agent-*/, waitlist/, etc.).
 - No test weakened to get green — all test changes reflect intended behavior.
+
+---
+
+## 2026-11-04 — CI GREEN + two real RLS bugs fixed (autonomous continuation)
+
+### Final CI result (all required checks PASS)
+- **Run 41790206817** @ commit `ddddcee` (branch `fix/ci-production-readiness`, 2026-11-04 07:11 UTC):
+  - `lint-and-typecheck` SUCCESS
+  - `migration-check` SUCCESS
+  - `cloudflare-gate` SUCCESS
+  - `local-stack-tests` SUCCESS — API **16 passed / 1 skipped**; Frontend **10 passed**; Security **19 passed / 4 skipped**
+  - `deploy-preview` / `deploy-production` skipped by design (no Cloudflare secrets on the branch; `production` requires human approval)
+
+### Root-cause chain completed since the last status report
+| Commit | Root cause (evidence run) | Fix |
+|---|---|---|
+| `e8f8811` | 6 ANON_JWT tests never executed in CI; anon-INSERT expectations contradicted the no-anon-policy design (run 41581245387: 8/8 UI pass, apikey test got 200+empty) | CI exports `ANON_JWT=$ANON_KEY`; PostgREST anon tests rewritten to the deny contract; validation coverage moved to the Edge Function (exact 400s); edge happy-path tightened to strict 201 + `enquiry_id` |
+| `f3f74e0` | Cloudflare Workers Builds failing: no wrangler config; deployed pages never received `window.__ENV__` (live probes) | `wrangler.jsonc` (assets-only) + `scripts/generate-config-env.mjs` + deploy-time injection in both SPAs + CI; validated locally (`wrangler deploy --dry-run` reads 15 assets; generator tested unset/bad-URL/valid) |
+| `4fee3a0` | Empirical: anon Bearer GET returns **200 + empty array** (deny policy), not 401/403; edge functions require JWT; 6 `expect(true)` placeholders faked coverage (run 41581931856) | "Zero rows exposed" contract under both auth vectors; edge tests send Bearer like real SPA traffic; REAL cross-user privacy test (2 auth users + service-key fixtures); bundle-secret tests implemented against the served tree; honest `test.skip` for unbuilt fixtures |
+| `e7a2374` | `create_enquiry_atomic` flips the consumed offer to `pending_enquiry`, so later count tests saw 7 instead of 8 (run 41583165839) | describe-level `afterAll` best-effort restore via service-role PATCH |
+| `f440f73` | Anon PATCH/DELETE returned **204** — PostgREST zero-row-match semantics, not an error (run 41583863591) | Accept [204,400,401,403,404] then PROVE zero mutation via service-role re-read; per-test seeded targets; cross-user test instrumented with exact status/body + password-grant retry |
+| `3c0a3ad` | Run 41584833702: `setup-cli@latest` died on GitHub API rate limit; `supabase start` died binding port 54324 on a fresh runner; Supabase CLI v3.0.0 released 2026-11-02 made `latest` a silent breaking-major bump | CLI pinned to v2.122.0 (proven green through 41583863591); cleanup+retry loop around `supabase start` |
+| `4826375` | Run 41585240456 instrumentation: authenticated GET returned PG **42P17 infinite recursion in policy staff_profiles** — `admin_read_all_staff` is a policy ON staff_profiles subquerying staff_profiles itself; every authenticated read touching staff_profiles 500'd | `public.staff_is_admin()` SECURITY DEFINER helper (boolean-only, execute revoked from public/anon, granted to authenticated); policy rewritten to use it |
+| `ddddcee` | Run 41789676056 instrumentation: authenticated GET returned PG **42501 permission denied for table users** — 5 policies subqueried `auth.users` which `authenticated` cannot SELECT | All 5 policies (operator read/update own offers, enquiry INSERT/SELECT-own) now use `auth.email()` (JWT claim, no privileged table access) |
+
+### Skipped tests — full accounting (nothing hidden)
+- `api.spec.ts` "Studio is accessible" (1): unconditional `test.skip` — dashboard UI check, not part of the API contract.
+- `security.spec.ts` staff allow/deny + inactive staff (2): `test.skip(true)` — need seeded staff auth users + `staff_profiles` fixtures (not yet built).
+- `security.spec.ts` expired-offer x2 (2): `test.skip(true)` — need a deterministic expired-offer seed fixture.
+- All ANON_JWT-gated privacy tests now EXECUTE in CI (16+19 passing include them). No coverage is claimed for the 4 placeholder areas.
+
+### MausBot capability matrix (re-verified 2026-11-04)
+| Capability | Result |
+|---|---|
+| MCP read tools (health, list_bots, models, messages, wait) | WORKING (verified live today) |
+| MCP write tools (send_bot_message etc.) | BLOCKED — app requires `OPENMAUSBOT_TOKEN` pairing token (human-only; error text captured verbatim) |
+| Computer/Chrome UI control via MausBot | NOT AVAILABLE — capability flags exist only on subscription drivers, all `unavailable`; only `opencodeGo` (chat-only) is live |
+| Alternative: bundled `agent-browser.exe` | WORKING — fetched live site content today (2026-11-04) |
+| Alternative: Playwright Chromium | WORKING — 15+ tests executed across suites |
+
+### Remaining human gates (exact blockers)
+1. Cloudflare: view the `Workers Builds: emptyleg` build log (dashboard-only), set `SUPABASE_PROJECT_URL` + `SUPABASE_ANON_KEY` build variables, ensure CF API token/account-id secrets, approve the `production` environment.
+2. Independent review of PR #1 (AI_TEAM.md contract: no self-review).
+3. Merge to `main` only after 1+2; then verify the deployed site renders offers (re-run `tests/live.spec.ts`).
