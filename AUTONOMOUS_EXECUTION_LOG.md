@@ -262,3 +262,19 @@ dev cache deleted; `git status` clean except the user's pre-existing untracked f
 3. **Invite + assign an independent reviewer** on PR #1.
 4. **Approve the `production` environment / approve deploy** after review.
 
+
+### 2026-11-04 (session 2) addendum — deploy-path pre-wiring completed
+- **Latent config bug found and fixed without a commit:** the workflow reads
+  `secrets.CLOUDFLARE_ACCOUNT_ID` (ci.yml L186, L223) but the account ID had
+  only been set as a repo *variable* → the deploy jobs would have received an
+  empty account ID. Fixed by also setting `CLOUDFLARE_ACCOUNT_ID` as a repo
+  **secret** (account IDs are not sensitive; the variable remains for
+  documentation). Verified present via `gh secret list` (names only).
+- Deploy path now fully pre-wired: the ONLY missing piece is the
+  `CLOUDFLARE_API_TOKEN` secret (human-only; OAuth minting 403-verified).
+  When it lands: `deploy-preview` runs automatically on this PR, and
+  `deploy-production` runs on merge to `main` after the environment approval.
+- Monitoring status at pause: PR #1 open, head `a4a7814`, no reviewers,
+  CI run `41793703119` SUCCESS; production Pages project untouched
+  (latest deployment still Oct 27 `master` restyle).
+
