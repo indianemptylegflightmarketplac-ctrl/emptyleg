@@ -221,6 +221,10 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: emptyleg
+          # REAL production project (verified via CF Pages API 2026-11-04):
+          # project `emptyleg-india` (production_branch=main, direct-upload,
+          # no env vars configured). A previous `projectName: emptyleg`
+          # would have created a NEW empty project instead of updating it.
+          projectName: emptyleg-india
           directory: public
           branch: main
