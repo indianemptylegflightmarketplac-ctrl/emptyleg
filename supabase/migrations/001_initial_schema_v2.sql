@@ -447,6 +447,13 @@ drop policy if exists "staff_read_audit" on public.audit_log;
 drop policy if exists "staff_read_notifications" on public.notification_log;
 drop policy if exists "allow_all_select" on public.booking_enquiries;
 drop policy if exists "customer_read_own_enquiries" on public.booking_enquiries;
+-- Explicit deny policies for anon role (security hardening)
+drop policy if exists "anon_deny_select_enquiries" on public.booking_enquiries;
+drop policy if exists "anon_deny_select_workflow" on public.booking_workflow_history;
+drop policy if exists "anon_deny_select_customer_profiles" on public.customer_profiles;
+drop policy if exists "anon_deny_select_staff_profiles" on public.staff_profiles;
+drop policy if exists "anon_deny_select_audit" on public.audit_log;
+drop policy if exists "anon_deny_select_notifications" on public.notification_log;
 
 -- =====================================================================
 -- OFFERS & OPERATORS POLICIES
@@ -472,12 +479,18 @@ create policy "public_read_authorized_operators" on public.operators
   using (authorization_status = 'authorized');
 
 -- Operators can read/update their own offers
+--
+-- CI run 41789676056 evidence: policies subquerying auth.users fail for the
+-- authenticated role with PG 42501 "permission denied for table users"
+-- (authenticated has no SELECT on auth.users in the Supabase schema).
+-- auth.email() reads the JWT email claim instead - no privileged table
+-- access, same verified-email semantics.
 create policy "operator_read_own_offers" on public.empty_leg_offers
   for select to authenticated
   using (
     operator_id in (
       select id from public.operators
-      where contact_email = (select email from auth.users where id = auth.uid())
+      where contact_email = auth.email()
     )
   );
 
@@ -486,13 +499,13 @@ create policy "operator_update_own_offers" on public.empty_leg_offers
   using (
     operator_id in (
       select id from public.operators
-      where contact_email = (select email from auth.users where id = auth.uid())
+      where contact_email = auth.email()
     )
   )
   with check (
     operator_id in (
       select id from public.operators
-      where contact_email = (select email from auth.users where id = auth.uid())
+      where contact_email = auth.email()
     )
   );
 
@@ -505,17 +518,19 @@ create policy "operator_update_own_offers" on public.empty_leg_offers
 --    All public enquiry submissions MUST go through the Edge Function
 --    (POST /functions/v1/enquiries) which uses the service-role key
 --    to call the atomic create_enquiry_atomic RPC.
+--    auth.email() (JWT claim) instead of auth.users subquery: PG 42501
+--    evidence in CI run 41789676056.
 create policy "auth_create_enquiries" on public.booking_enquiries
   for insert to authenticated
   with check (
-    customer_email = (select email from auth.users where id = auth.uid())
+    customer_email = auth.email()
   );
 
 -- 2. Customer SELECT: own enquiries only (matched by verified email)
 create policy "customer_read_own_enquiries" on public.booking_enquiries
   for select to authenticated
   using (
-    customer_email = (select email from auth.users where id = auth.uid())
+    customer_email = auth.email()
   );
 
 -- 4. Staff SELECT: all enquiries (active staff with valid role)
@@ -554,6 +569,63 @@ create policy "staff_update_enquiries" on public.booking_enquiries
 -- No UPDATE policy for customers (denied by default)
 
 -- =====================================================================
+-- STAFF PRIVILEGE HELPER (recursion-safe)
+-- =====================================================================
+-- CI run 41585240456 root cause: a policy ON staff_profiles
+-- ("admin_read_all_staff") subqueried staff_profiles itself, so every
+-- authenticated-role read that touches staff_profiles (enquiries, audit,
+-- notifications, submissions) failed with PG 42P17 "infinite recursion
+-- detected in policy for relation staff_profiles".
+-- SECURITY DEFINER evaluates the subquery with the function owner's
+-- privileges, bypassing staff_profiles RLS on the recursion path. It is
+-- NOT available to anon and only exposes a boolean (no row data leaks).
+create or replace function public.staff_is_admin()
+  returns boolean
+  language sql
+  stable
+  security definer
+  set search_path = pg_catalog, pg_temp
+as $$
+  select exists (
+    select 1 from public.staff_profiles sp
+    where sp.id = auth.uid()
+      and sp.role = 'admin'
+      and sp.is_active
+  )
+$$;
+
+revoke execute on function public.staff_is_admin() from public, anon;
+grant execute on function public.staff_is_admin() to authenticated;
+
+-- =====================================================================
+-- EXPLICIT ANON DENY POLICIES (security hardening)
+-- =====================================================================
+
+create policy "anon_deny_select_enquiries" on public.booking_enquiries
+  for select to anon
+  using (false);
+
+create policy "anon_deny_select_workflow" on public.booking_workflow_history
+  for select to anon
+  using (false);
+
+create policy "anon_deny_select_customer_profiles" on public.customer_profiles
+  for select to anon
+  using (false);
+
+create policy "anon_deny_select_staff_profiles" on public.staff_profiles
+  for select to anon
+  using (false);
+
+create policy "anon_deny_select_audit" on public.audit_log
+  for select to anon
+  using (false);
+
+create policy "anon_deny_select_notifications" on public.notification_log
+  for select to anon
+  using (false);
+
+-- =====================================================================
 -- PROFILE POLICIES
 -- =====================================================================
 
@@ -574,14 +646,9 @@ create policy "staff_read_own_profile" on public.staff_profiles
 
 create policy "admin_read_all_staff" on public.staff_profiles
   for select to authenticated
-  using (
-    exists (
-      select 1 from public.staff_profiles sp
-      where sp.id = auth.uid()
-        and sp.role = 'admin'
-        and sp.is_active
-    )
-  );
+  -- Recursion-safe: uses the SECURITY DEFINER helper above instead of
+  -- subquerying staff_profiles (PG 42P17 evidence: CI run 41585240456).
+  using (public.staff_is_admin());
 
 -- =====================================================================
 -- AUDIT & NOTIFICATION POLICIES

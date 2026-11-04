@@ -1,7 +1,62 @@
 # Indian Empty-Leg Flight Marketplace — Project Status
 
-**Last Updated:** 2026-10-14  
-**Phase:** Phase 3 Implementation Complete — Ready for Cloud Deployment
+**Last Updated:** 2026-11-03  
+**Phase:** Phase 3 Implementation Complete — Production-readiness hardening on branch `fix/ci-production-readiness`
+
+### 2026-11-04 session 2 — production blockers status (CI green @ `584840f`, run 41792608362)
+- **Cloudflare**: live site = Pages project `emptyleg-india` (account
+  `fa6641...`, direct-upload, no env vars). The red `Workers Builds: emptyleg`
+  check is a stray integration in an unreachable foreign account (`ff7900...`);
+  `main` is unprotected → it does not block merge. Deploy pipeline corrected
+  to target `emptyleg-india` (`584840f`).
+- **Configured autonomously** (via `gh secret/variable set`, values never
+  exposed): `SUPABASE_PROJECT_URL`, `SUPABASE_ANON_KEY` (secrets),
+  `CLOUDFLARE_ACCOUNT_ID` (variable). No service_role key exists locally.
+- **Local validation**: generator fail-closed proven live (missing env → exit
+  1, writes nothing); correct values verified in-memory; `wrangler deploy
+  --dry-run` bundles 16 assets.
+- **Built-site flow test 16/16** (`wrangler dev` + mock Edge Functions):
+  `/config.env.js` served as real JS config (NOT the SPA-fallback HTML that
+  production currently returns), offers render, enquiry modal submits with
+  Bearer auth, POST captured with offer_id intact.
+- **Human gates remaining**: (1) create CF API token (Pages: Edit) → repo
+  secret `CLOUDFLARE_API_TOKEN` — OAuth cannot mint it (403 verified);
+  (2) remove/ignore the stray `ff7900...` Workers Builds integration;
+  (3) invite + assign an independent reviewer on PR #1 (only the owner is a
+  collaborator — no reviewer exists to assign); (4) approve production deploy.
+
+### 2026-11-04 CI verification status — ALL REQUIRED CHECKS PASS
+- **Run 41790206817** @ `ddddcee`: lint+typecheck, migration-check, cloudflare-gate, local-stack-tests all SUCCESS.
+- Test totals: API 16 pass/1 skip · Frontend 10 pass · Security 19 pass/4 skip.
+- Skip accounting: Studio dashboard check (1, unconditional) + 4 placeholders
+  (staff-user fixtures x2, expired-offer fixture x2) — each documented inline
+  in the spec with reasons. All ANON_JWT-gated privacy tests execute in CI.
+- Two production-dangerous RLS bugs found *by the tests* and fixed:
+  PG 42P17 staff_profiles policy recursion (run 41585240456) and
+  PG 42501 auth.users permission denied (run 41789676056). Both fixed in
+  `001_initial_schema_v2.sql` (`staff_is_admin()` SECURITY DEFINER helper;
+  `auth.email()` instead of auth.users subqueries).
+- Remaining red: `Workers Builds: emptyleg` (Cloudflare dashboard-side
+  integration; build log not accessible without dashboard access).
+- Deploys correctly skipped (no CF secrets on branch; `production` needs
+  human approval). See AUTONOMOUS_EXECUTION_LOG.md (2026-11-04 entry) for
+  the full commit-to-evidence chain.
+
+### 2026-11-03 production-readiness hardening (branch `fix/ci-production-readiness`)
+- **Privacy fix:** explicit `anon_deny_select_*` RLS policies added to
+  `001_initial_schema_v2.sql` (commit `f4af240`) — anon gets 401/403 (not a
+  readable empty array) on all sensitive tables. Verified: API tests PASS in
+  CI run 41578651940.
+- **Test contract fix:** anon privacy tests use `Authorization: Bearer` JWT
+  (commit `97de730`) — `apikey` alone does not enforce RLS roles in the local
+  stack. Assertions reflect real (stricter) behavior; no test was weakened.
+- **Frontend config bug:** `public/index.html` now loads `config.local.js`
+  before `config.js` (commit `455566e`) — `window.__ENV_LOCAL__` was being read
+  before it was defined, failing the app closed (root cause of 13 E2E failures).
+- **OpenMausBot:** a local AI agent-team app (OpenMausBot v0.1.138) is
+  integrated with OpenCode via its bundled stdio MCP server (read-only
+  verified: health, bot list, models). See `AUTONOMOUS_EXECUTION_LOG.md`.
+- Docs refreshed: `AUTONOMOUS_EXECUTION_LOG.md`, `DEPLOYMENT_CHECKLIST.md` created.
 
 ---
 
@@ -35,12 +90,11 @@
 - Edge Functions exposed at `/functions/v1`
 
 ### 5. CI/CD (GitHub Actions)
-- Lint & TypeCheck
-- Migration check (dry-run against PostgreSQL)
-- API tests (14 tests, Playwright)
-- Frontend E2E tests (16 tests, Playwright)
-- Security tests
-- Deploy check on main branch
+- Lint & TypeCheck (tsc --noEmit)
+- Migration check (ephemeral local stack, Supabase CLI pinned v2.122.0)
+- local-stack-tests: API (17 tests) + Frontend E2E (10) + Security (23) via Playwright
+- Cloudflare gate + deploy jobs (deploy-time `window.__ENV__` injection via `scripts/generate-config-env.mjs`; fail-closed on missing secrets)
+- Deploy jobs require `production` environment approval (human gate)
 
 ### 6. Configuration & Security
 - `config.js`: Production-safe merge order (injected > local), fails closed
@@ -191,7 +245,7 @@ python3 -m http.server 5173 -d public
 - **Edge Functions use service-role key**: Server-only, bypasses RLS safely
 - **Atomic RPC for enquiries**: Prevents overbooking, validates offer state
 - **Rate limiting**: Kong plugin on `/functions/v1/enquiries`
-- **RLS policies**: Anon INSERT only, authenticated email enforcement, staff role-based access
+- **RLS policies**: Anon INSERT denied for booking_enquiries (public path = Edge Function), authenticated email enforcement via `auth.email()`, staff access via `staff_is_admin()` SECURITY DEFINER helper (recursion-safe), explicit anon deny policies on all sensitive tables
 - **Error sanitization**: No SQL errors exposed to clients
 
 ---

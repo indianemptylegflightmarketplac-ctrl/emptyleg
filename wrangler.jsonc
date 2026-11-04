@@ -1,0 +1,24 @@
+// Cloudflare Workers (Builds) configuration for the static marketplace SPA.
+//
+// The `emptyleg` production Worker serves the static file tree in `public/`
+// (landing + marketplace + admin/operator pages). This deploy is
+// assets-only: Edge Functions and the database live in Supabase, and the
+// frontend talks to them over HTTPS. SPA fallback renders the nearest
+// index.html for unknown client-side paths.
+//
+// NOTE: deploy-time runtime configuration is injected into
+// public/config.env.js by the deploy job (see .github/workflows/ci.yml):
+// it reaches the browser before public/config.js merges final values.
+// That file is regenerated on every deploy and never committed.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "emptyleg",
+  "compatibility_date": "2026-01-01",
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "single-page-application"
+  },
+  "build": {
+    "command": "node scripts/generate-config-env.mjs"
+  }
+}

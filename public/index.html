@@ -293,8 +293,13 @@
   </footer>
 
   <!-- Runtime configuration loader -->
-  <script src="config.js"></script>
+  <!-- Load order is strictly: injected deploy config (config.env.js, generated
+       by the deploy job and NEVER committed) -> config.local.js (gitignored,
+       local dev) -> config.js (merges __ENV__ (injected) > __ENV_LOCAL__ >
+       fails closed). Each file is optional except the last. -->
+  <script src="config.env.js"></script>
   <script src="config.local.js"></script>
+  <script src="config.js"></script>
 
   <script>
     const SUPABASE_URL = window.__ENV__?.SUPABASE_URL;

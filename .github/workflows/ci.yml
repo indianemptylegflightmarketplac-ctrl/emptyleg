@@ -2,16 +2,30 @@ name: CI/CD
 
 on:
   push:
-    branches: [master, main]
+    branches: [master, main, fix/ci-production-readiness]
   pull_request:
     branches: [master, main]
 
-env:
-  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-
 jobs:
+  cloudflare-gate:
+    # Detects whether Cloudflare deploy credentials exist, at step level
+    # (secrets/env are not usable in job-level `if` expressions).
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.gate.outputs.ready }}
+    steps:
+      - id: gate
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -n "$CF_TOKEN" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare credentials present"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare credentials absent - deploy jobs will be skipped"
+          fi
+
   lint-and-typecheck:
     runs-on: ubuntu-latest
     steps:
@@ -24,70 +38,148 @@ jobs:
       - run: npx tsc --noEmit
 
   migration-check:
+    # Applies the tracked Supabase migrations + seed to an EPHEMERAL LOCAL
+    # stack — validates migration ordering/schema without touching any
+    # cloud/production database and without requiring Supabase credentials.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Pinned: 'latest' made setup-cli resolve the release via an
+      # unauthenticated GitHub API call, which FAILED run 41584833702
+      # ("rate limit exceeded") on 2026-11-03. v2.122.0 is the last v2
+      # release and ran green across 41578651940..41583863591; v3.0.0
+      # (released 2026-11-02) is a breaking major bump and must be adopted
+      # deliberately, not by surprise through 'latest'.
       - uses: supabase/setup-cli@v1
-      - run: supabase migration list
-      - run: supabase db push --dry-run
+        with:
+          version: v2.122.0
+      - name: Assert migrations exist
+        run: test -f supabase/migrations/001_initial_schema_v2.sql && test -f supabase/seed.sql
+      - name: Start local Supabase stack (applies migrations + seed)
+        run: |
+          ok=0
+          for i in 1 2 3; do
+            if supabase start; then ok=1; break; fi
+            echo "::warning::supabase start attempt $i failed; cleaning up before retry"
+            supabase stop --no-backup >/dev/null 2>&1 || true
+            docker ps -aq --filter "name=supabase" | xargs -r docker rm -f >/dev/null 2>&1 || true
+            sleep 15
+          done
+          [ "$ok" = "1" ] || { echo "supabase start failed after 3 attempts"; exit 1; }
+      - name: Verify schema applied
+        run: |
+          supabase status
+          supabase status -o env | grep -q '^ANON_KEY='
 
-  api-tests:
+  local-stack-tests:
+    # Runs the Playwright suite (API, frontend, security) against the same
+    # ephemeral local Supabase stack. Read-mostly; enquiries created during
+    # the run live only in this disposable container.
     runs-on: ubuntu-latest
-    if: env.ANON_KEY != ''
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npx playwright test tests/api.spec.ts --reporter=line
-        env:
-          ANON_KEY: ${{ secrets.ANON_KEY }}
-          ANON_JWT: ${{ secrets.ANON_JWT }}
-
-  frontend-tests:
-    runs-on: ubuntu-latest
-    if: env.ANON_KEY != ''
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # Same rationale as the migration-check job: pinned CLI removes the
+      # rate-limit-prone 'latest' resolution step and the v3.0.0 surprise
+      # bump; the retry loop survives runners where a partial container
+      # start leaves a stale host port bound (seen in run 41584833702:
+      # port 54324 "address already in use").
+      - uses: supabase/setup-cli@v1
         with:
-          node-version: '20'
-          cache: 'npm'
+          version: v2.122.0
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      # Start frontend preview server
-      - run: npx serve public -l 5173 &
-      - run: sleep 5
-      - run: npx playwright test tests/frontend.spec.ts --reporter=line
-        env:
-          ANON_KEY: ${{ secrets.ANON_KEY }}
-          ANON_JWT: ${{ secrets.ANON_JWT }}
-
-  security-tests:
-    runs-on: ubuntu-latest
-    if: env.ANON_KEY != ''
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npx playwright test tests/security.spec.ts --reporter=line
-        env:
-          ANON_KEY: ${{ secrets.ANON_KEY }}
-          ANON_JWT: ${{ secrets.ANON_JWT }}
+      - name: Start local Supabase stack (applies migrations + seed)
+        run: |
+          ok=0
+          for i in 1 2 3; do
+            if supabase start; then ok=1; break; fi
+            echo "::warning::supabase start attempt $i failed; cleaning up before retry"
+            supabase stop --no-backup >/dev/null 2>&1 || true
+            docker ps -aq --filter "name=supabase" | xargs -r docker rm -f >/dev/null 2>&1 || true
+            sleep 15
+          done
+          [ "$ok" = "1" ] || { echo "supabase start failed after 3 attempts"; exit 1; }
+      - name: Export local stack configuration for tests
+        run: |
+          # `supabase status -o env` emits API_URL=<gateway root>. Tests speak
+          # PostgREST, so they need the /rest/v1 path; the frontend speaks the
+          # gateway root (/functions/v1/...).
+          supabase status -o env > /tmp/sb_env
+          GATEWAY_ROOT=$(grep '^API_URL=' /tmp/sb_env | cut -d= -f2 | tr -d '"' | sed 's|/*$||')
+          ANON_KEY=$(grep '^ANON_KEY=' /tmp/sb_env | cut -d= -f2 | tr -d '"')
+          SERVICE_ROLE_KEY=$(grep '^SERVICE_ROLE_KEY=' /tmp/sb_env | cut -d= -f2 | tr -d '"')
+          {
+            echo "SUPABASE_URL=${GATEWAY_ROOT}/rest/v1"
+            echo "SUPABASE_GATEWAY_URL=${GATEWAY_ROOT}"
+            echo "ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "KONG_URL=$GATEWAY_ROOT"
+          } >> "$GITHUB_ENV"
+          # ANON_KEY is itself the anon JWT in the local stack (same value);
+          # exporting it as ANON_JWT lets the Bearer-authenticated privacy
+          # tests actually execute instead of silently skipping.
+          echo "ANON_JWT=$ANON_KEY" >> "$GITHUB_ENV"
+      - name: Write frontend runtime config (config.local.js)
+        run: |
+          # index.html loads config.env.js (deploy-time inject; generated by
+          # the deploy job) then config.local.js then config.js; order is
+          # config chain: injected env > local config > fail closed.
+          # For this disposable test environment both files bind the
+          # frontend to the local stack only.
+          cat > public/config.env.js <<EOF
+          window.__ENV__ = {
+            SUPABASE_URL: '${SUPABASE_GATEWAY_URL}',
+            SUPABASE_ANON_KEY: '${ANON_KEY}'
+          };
+          EOF
+          cat > public/config.local.js <<EOF
+          window.__ENV_LOCAL__ = {
+            SUPABASE_URL: '${SUPABASE_GATEWAY_URL}',
+            SUPABASE_ANON_KEY: '${ANON_KEY}',
+            ALLOW_DEV_DEFAULTS: 'true'
+          };
+          EOF
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Serve frontend
+        run: |
+          npx serve public -l 5173 &
+          sleep 5
+      - name: API tests
+        run: npx playwright test tests/api.spec.ts --reporter=line
+      - name: Frontend tests
+        run: npx playwright test tests/frontend.spec.ts --reporter=line
+      - name: Security tests
+        run: npx playwright test tests/security.spec.ts --reporter=line
+      - name: Stop local stack
+        if: always()
+        run: supabase stop --no-backup || true
 
   deploy-preview:
-    needs: [lint-and-typecheck, migration-check]
+    needs: [cloudflare-gate, lint-and-typecheck, migration-check]
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: needs.cloudflare-gate.outputs.ready == 'true' && github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
+      - name: Inject deploy-time runtime config
+        env:
+          SUPABASE_PROJECT_URL: ${{ secrets.SUPABASE_PROJECT_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_PROJECT_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Missing SUPABASE_PROJECT_URL / SUPABASE_ANON_KEY - refusing to deploy a fail-closed frontend"
+            exit 1
+          fi
+          case "$SUPABASE_PROJECT_URL" in
+            *"/rest/v1"*) echo "SUPABASE_PROJECT_URL must be the project ROOT (no /rest/v1)"; exit 1 ;;
+            *"functions/v1"*) echo "SUPABASE_PROJECT_URL must be the project ROOT (no /functions/v1)"; exit 1 ;;
+          esac
+          printf 'window.__ENV__ = { SUPABASE_URL: "%s", SUPABASE_ANON_KEY: "%s" };\n' \
+            "$SUPABASE_PROJECT_URL" "$SUPABASE_ANON_KEY" > public/config.env.js
+          echo "public/config.env.js generated (never committed)"
       - uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -97,15 +189,42 @@ jobs:
           branch: preview-${{ github.event.number }}
 
   deploy-production:
-    needs: [lint-and-typecheck, migration-check, api-tests, frontend-tests, security-tests]
+    needs: [cloudflare-gate, lint-and-typecheck, migration-check, local-stack-tests]
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && github.event_name == 'push'
+    # Human approval gate: requires a configured `production` environment with
+    # a reviewer requirement. While that environment does not exist this job
+    # fails fast instead of silently deploying.
+    if: >-
+      needs.cloudflare-gate.outputs.ready == 'true' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push'
+    environment: production
     steps:
       - uses: actions/checkout@v4
+      - name: Inject deploy-time runtime config
+        env:
+          SUPABASE_PROJECT_URL: ${{ secrets.SUPABASE_PROJECT_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_PROJECT_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Missing SUPABASE_PROJECT_URL / SUPABASE_ANON_KEY - refusing to deploy a fail-closed frontend"
+            exit 1
+          fi
+          case "$SUPABASE_PROJECT_URL" in
+            *"/rest/v1"*) echo "SUPABASE_PROJECT_URL must be the project ROOT (no /rest/v1)"; exit 1 ;;
+            *"functions/v1"*) echo "SUPABASE_PROJECT_URL must be the project ROOT (no /functions/v1)"; exit 1 ;;
+          esac
+          printf 'window.__ENV__ = { SUPABASE_URL: "%s", SUPABASE_ANON_KEY: "%s" };\n' \
+            "$SUPABASE_PROJECT_URL" "$SUPABASE_ANON_KEY" > public/config.env.js
+          echo "public/config.env.js generated (never committed)"
       - uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: emptyleg
+          # REAL production project (verified via CF Pages API 2026-11-04):
+          # project `emptyleg-india` (production_branch=main, direct-upload,
+          # no env vars configured). A previous `projectName: emptyleg`
+          # would have created a NEW empty project instead of updating it.
+          projectName: emptyleg-india
           directory: public
           branch: main

@@ -3,6 +3,7 @@ node_modules/
 
 # Local configuration (contains credentials - NEVER commit)
 public/config.local.js
+public/config.env.js
 
 # IDE/Editor
 .vscode/

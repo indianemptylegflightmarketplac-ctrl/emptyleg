@@ -409,6 +409,11 @@
   </footer>
 
   <!-- Runtime configuration loader -->
+  <!-- config.env.js (deploy-time, gitignored) and ../config.local.js
+       (gitignored, local dev) MUST load BEFORE ../config.js, which merges
+       __ENV__ (injected) > __ENV_LOCAL__ and fails closed otherwise. -->
+  <script src="../config.env.js"></script>
+  <script src="../config.local.js"></script>
   <script src="../config.js"></script>
 
   <!-- Mobile sticky enquire bar -->

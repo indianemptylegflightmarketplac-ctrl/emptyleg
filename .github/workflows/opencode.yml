@@ -1,0 +1,70 @@
+name: opencode
+
+# AI team automation (see AI_TEAM.md):
+# - Comment "/opencode <task>" or "/oc <task>" on any issue or PR review
+#   comment and OpenCode will execute the task inside this runner —
+#   implement on a branch, push, and report back on the thread.
+# - When an issue is opened/labeled, OpenCode triages according to
+#   AI_TEAM.md.
+#
+# Cost: runs on free OpenRouter models (:free), so no inference spend.
+# This workflow has NO effect until the repository secret
+# OPENROUTER_API_KEY is configured (the job skips silently otherwise).
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: opencode-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  opencode:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'issue_comment' ||
+      github.event_name == 'pull_request_review_comment' ||
+      github.event_name == 'issues'
+    steps:
+      - name: Gate on OpenRouter key
+        id: gate
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          if [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::OPENROUTER_API_KEY secret is not configured - OpenCode agent skipped. Add it under repo Settings > Secrets and variables > Actions."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Checkout repository
+        if: steps.gate.outputs.configured == 'true'
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: true
+
+      - name: Run OpenCode
+        if: steps.gate.outputs.configured == 'true'
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        with:
+          model: openrouter/nvidia/nemotron-3.5-super-vl:free
+          use_github_token: 'true'
+          prompt: |
+            You are an agent of the EmptyLeg India AI development team.
+            Read AI_TEAM.md and obey its task assignment rules, branch
+            conventions, review rules, security requirements and escalation
+            process. Work only within the assigned task; do not force
+            anything; open a pull request for code changes and report
+            progress on the thread.
