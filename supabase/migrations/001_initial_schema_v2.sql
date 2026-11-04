@@ -561,8 +561,36 @@ create policy "staff_update_enquiries" on public.booking_enquiries
 -- No UPDATE policy for customers (denied by default)
 
 -- =====================================================================
+-- STAFF PRIVILEGE HELPER (recursion-safe)
+-- =====================================================================
+-- CI run 41585240456 root cause: a policy ON staff_profiles
+-- ("admin_read_all_staff") subqueried staff_profiles itself, so every
+-- authenticated-role read that touches staff_profiles (enquiries, audit,
+-- notifications, submissions) failed with PG 42P17 "infinite recursion
+-- detected in policy for relation staff_profiles".
+-- SECURITY DEFINER evaluates the subquery with the function owner's
+-- privileges, bypassing staff_profiles RLS on the recursion path. It is
+-- NOT available to anon and only exposes a boolean (no row data leaks).
+create or replace function public.staff_is_admin()
+  returns boolean
+  language sql
+  stable
+  security definer
+  set search_path = pg_catalog, pg_temp
+as $$
+  select exists (
+    select 1 from public.staff_profiles sp
+    where sp.id = auth.uid()
+      and sp.role = 'admin'
+      and sp.is_active
+  )
+$$;
+
+revoke execute on function public.staff_is_admin() from public, anon;
+grant execute on function public.staff_is_admin() to authenticated;
+
+-- =====================================================================
 -- EXPLICIT ANON DENY POLICIES (security hardening)
--- These ensure anon role gets 401/403 instead of 200 with empty array
 -- =====================================================================
 
 create policy "anon_deny_select_enquiries" on public.booking_enquiries
@@ -610,14 +638,9 @@ create policy "staff_read_own_profile" on public.staff_profiles
 
 create policy "admin_read_all_staff" on public.staff_profiles
   for select to authenticated
-  using (
-    exists (
-      select 1 from public.staff_profiles sp
-      where sp.id = auth.uid()
-        and sp.role = 'admin'
-        and sp.is_active
-    )
-  );
+  -- Recursion-safe: uses the SECURITY DEFINER helper above instead of
+  -- subquerying staff_profiles (PG 42P17 evidence: CI run 41585240456).
+  using (public.staff_is_admin());
 
 -- =====================================================================
 -- AUDIT & NOTIFICATION POLICIES
